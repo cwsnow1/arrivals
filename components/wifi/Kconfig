@@ -1,0 +1,10 @@
+menu "OTA Config"
+    config SSID
+    string "SSID"
+    default "my-ssid"
+
+    config PASSWORD
+    string "Password"
+    default "password"
+
+endmenu

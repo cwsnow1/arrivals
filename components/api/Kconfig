@@ -1,0 +1,6 @@
+menu "API Config"
+    config API_KEY
+    string "API Key"
+    default "abc123"
+
+endmenu
