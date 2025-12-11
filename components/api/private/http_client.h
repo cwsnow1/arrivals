@@ -13,6 +13,8 @@ typedef struct {
 } http_response_t;
 
 http_response_t http_get(const char* url);
+http_response_t http_get_and_keep_open(const char* url);
+void http_close(void);
 
 #ifdef __cplusplus
 }

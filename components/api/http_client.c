@@ -6,6 +6,8 @@
 
 static const char* TAG = "http_client";
 
+static esp_http_client_handle_t s_client;
+
 static esp_err_t _http_event_handler(esp_http_client_event_t* evt)
 {
     http_response_t* response = (http_response_t*) evt->user_data;
@@ -30,12 +32,7 @@ static esp_err_t _http_event_handler(esp_http_client_event_t* evt)
         break;
     case HTTP_EVENT_ON_DATA:
         ESP_LOGD(TAG, "HTTP_EVENT_ON_DATA, len=%d", evt->data_len);
-        void* tmp = realloc(response->buffer, response->length + evt->data_len + 1);
-        if (!tmp) {
-            ESP_LOGE(TAG, "Out of memory!");
-            break;
-        }
-        response->buffer = tmp;
+        response->buffer = realloc(response->buffer, response->length + evt->data_len + 2);
         memcpy(response->buffer + response->length, evt->data, evt->data_len);
         response->length += evt->data_len;
         response->buffer[response->length + 1] = 0;
@@ -69,4 +66,34 @@ http_response_t http_get(const char* url)
     r.status = esp_http_client_get_status_code(client);
     esp_http_client_cleanup(client);
     return r;
+}
+
+http_response_t http_get_and_keep_open(const char* url)
+{
+    http_response_t resp;
+    memset(&resp, 0, sizeof(resp));
+    if (s_client == NULL) {
+        esp_http_client_config_t cfg = {
+            .url = url,
+            .event_handler = _http_event_handler,
+            .user_data = &resp,
+        };
+        s_client = esp_http_client_init(&cfg);
+        if (!s_client) return resp;
+    } else {
+        esp_http_client_set_url(s_client, url);
+        esp_http_client_set_user_data(s_client, &resp);
+    }
+
+    esp_http_client_perform(s_client);
+    resp.status = esp_http_client_get_status_code(s_client);
+    return resp;
+}
+
+void http_close(void)
+{
+    if (s_client) {
+        esp_http_client_cleanup(s_client);
+        s_client = NULL;
+    }
 }

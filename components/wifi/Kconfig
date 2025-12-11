@@ -1,4 +1,4 @@
-menu "OTA Config"
+menu "WiFi Network Config"
     config SSID
     string "SSID"
     default "my-ssid"
