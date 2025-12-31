@@ -53,12 +53,11 @@ static esp_err_t _http_event_handler(esp_http_client_event_t* evt)
 
 http_response_t http_get(const char* url)
 {
-    http_response_t r;
-    memset(&r, 0, sizeof(r));
+    http_response_t r = { 0 };
     esp_http_client_config_t cfg = {
         .url = url,
         .event_handler = _http_event_handler,
-        .user_data = &r
+        .user_data = &r // using address of local variable is OK because esp_http_client_perform blocks
     };
     esp_http_client_handle_t client = esp_http_client_init(&cfg);
     if (!client) return r;
@@ -70,24 +69,23 @@ http_response_t http_get(const char* url)
 
 http_response_t http_get_and_keep_open(const char* url)
 {
-    http_response_t resp;
-    memset(&resp, 0, sizeof(resp));
+    http_response_t r = { 0 };
     if (s_client == NULL) {
         esp_http_client_config_t cfg = {
             .url = url,
             .event_handler = _http_event_handler,
-            .user_data = &resp,
+            .user_data = &r, // using address of local variable is OK because esp_http_client_perform blocks
         };
         s_client = esp_http_client_init(&cfg);
-        if (!s_client) return resp;
+        if (!s_client) return r;
     } else {
         esp_http_client_set_url(s_client, url);
-        esp_http_client_set_user_data(s_client, &resp);
+        esp_http_client_set_user_data(s_client, &r);
     }
 
     esp_http_client_perform(s_client);
-    resp.status = esp_http_client_get_status_code(s_client);
-    return resp;
+    r.status = esp_http_client_get_status_code(s_client);
+    return r;
 }
 
 void http_close(void)

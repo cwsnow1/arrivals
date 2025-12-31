@@ -30,7 +30,7 @@ typedef struct {
     size_t count;
 } line_t;
 
-static line_t lines[LINE_COUNT];
+//static line_t lines[LINE_COUNT];
 
 int timestamp_subtract(const char* arrival_ts)
 {
@@ -84,8 +84,11 @@ static void decode(http_response_t r)
             char buffer[64];
             json_arr_get_object(&ctx, j);
 
+            json_obj_get_string(&ctx, "rn", buffer, sizeof buffer);
+            int rn = strtol(buffer, NULL, 10);
+
             json_obj_get_string(&ctx, "nextStaNm", buffer, sizeof buffer);
-            printf("Train %-2d arrival at %-30s ", j, buffer);
+            printf("Run %d arrival at %-30s ", rn, buffer);
 
             json_obj_get_string(&ctx, "arrT", buffer, sizeof buffer);
             printf("at %s, seconds remaining: %4d ", buffer, timestamp_subtract(buffer));
