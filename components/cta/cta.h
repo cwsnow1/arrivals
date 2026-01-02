@@ -4,15 +4,28 @@
 #include <stddef.h>
 
 typedef enum {
-    RED_LINE    = 1 << 0,
-    BLUE_LINE   = 1 << 1,
-    BROWN_LINE  = 1 << 2,
-    GREEN_LINE  = 1 << 3,
-    ORANGE_LINE = 1 << 4,
-    PURPLE_LINE = 1 << 5,
-    PINK_LINE   = 1 << 6,
-    YELLOW_LINE = 1 << 7,
+    RED_LINE,
+    BLUE_LINE,
+    GREEN_LINE,
+    BROWN_LINE,
+    PURPLE_LINE,
+    YELLOW_LINE,
+    PINK_LINE,
+    ORANGE_LINE,
+
+    LINE_COUNT
 } __attribute__((__packed__)) line_name_t;
+
+typedef enum {
+    FLAG_RED_LINE    = 1 << RED_LINE,
+    FLAG_BLUE_LINE   = 1 << BLUE_LINE,
+    FLAG_GREEN_LINE  = 1 << GREEN_LINE,
+    FLAG_BROWN_LINE  = 1 << BROWN_LINE,
+    FLAG_PURPLE_LINE = 1 << PURPLE_LINE,
+    FLAG_YELLOW_LINE = 1 << YELLOW_LINE,
+    FLAG_PINK_LINE   = 1 << PINK_LINE,
+    FLAG_ORANGE_LINE = 1 << ORANGE_LINE,
+} __attribute__((__packed__)) line_flag_t;
 
 typedef struct {
     uint32_t run;
@@ -170,7 +183,7 @@ typedef enum {
     WESTERN_ORANGE                                                     = 40310,
     WESTERN_PINK                                                       = 40740,
     WILSON_RED_PURPLE                                                  = 40540,
-} station_id_t;
+} __attribute__((__packed__)) station_id_t;
 
 typedef enum {
     _18TH_54TH_CERMAK_BOUND                   = 30162,
@@ -485,18 +498,18 @@ typedef struct {
 typedef struct {
     station_id_t id;
     location_t location;
+    uint16_t led_index[LINE_COUNT];
 } station_t;
 
 typedef struct {
     uint16_t start;
-    uint16_t station;
     int8_t count;
 } led_index_t;
 
 typedef struct stop {
-    line_name_t line;
-    station_t station;
-    led_index_t led;
+    line_flag_t line;
+    uint8_t station_idx;
+    led_index_t led[LINE_COUNT];
 } stop_t;
 
 led_index_t cta_get_led_index(size_t stop_id);

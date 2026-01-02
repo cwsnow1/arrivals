@@ -1,0 +1,3 @@
+"Howard (Red, Purple & Yellow lines)" -> "Oakton-Skokie (Yellow Line)"
+"Oakton-Skokie (Yellow Line)" -> "Dempster-Skokie (Yellow Line)", "Howard (Red, Purple & Yellow lines)"
+"Dempster-Skokie (Yellow Line)" -> "Oakton-Skokie (Yellow Line)"
