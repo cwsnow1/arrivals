@@ -12,6 +12,7 @@
 
 #include "wifi.h"
 #include "api.h"
+#include "cta.h"
 
 static const char* TAG = "main";
 
@@ -39,7 +40,7 @@ void app_main(void)
     setenv("TZ", "CST6CDT,M3.2.0/2:00:00,M11.1.0/2:00:00", 1);
     tzset();
 
-    #define NUM_LEDS 400
+    #define NUM_LEDS 500
     led_strip_config_t led_cfg = {
         .strip_gpio_num = GPIO_NUM_45,
         .max_leds = NUM_LEDS,
@@ -54,16 +55,16 @@ void app_main(void)
     };
     led_strip_handle_t led_handle = NULL;
     ESP_ERROR_CHECK(led_strip_new_spi_device(&led_cfg, &spi_cfg, &led_handle));
-    for (size_t j = 0;;++j) {
-        size_t lit_index = j % NUM_LEDS;
-        for (size_t i = 0; i < NUM_LEDS; ++i) {
-            if (i == lit_index)
-                led_strip_set_pixel(led_handle, i, 1, 0, 0);
-            else
-                led_strip_set_pixel(led_handle, i, 0, 0, 0);
+    led_strip_clear(led_handle);
+
+    for (size_t j = 0;; ++j, vTaskDelay(pdMS_TO_TICKS(250))) {
+        for (size_t i = 30001; i <= 30300; ++i) {
+            led_index_t index = cta_get_led_index(i);
+            if (index.station) {
+                led_strip_set_pixel(led_handle, index.station, 1, 0, 0);
+            }
         }
         led_strip_refresh(led_handle);
-        vTaskDelay(pdMS_TO_TICKS(10));
     }
 
     return;

@@ -11,25 +11,6 @@ static const char* TAG = "api";
 
 #define API_ENDPOINT(line) "http://lapi.transitchicago.com/api/1.0/ttpositions.aspx?rt=" line "&outputType=JSON&key=" CONFIG_API_KEY
 
-typedef enum {
-    RED_LINE,
-    BLUE_LINE,
-    BROWN_LINE,
-
-    LINE_COUNT
-} __packed line_name_t;
-
-typedef struct {
-    uint32_t run;
-    uint32_t next;
-    uint32_t original_estimate;
-} train_t;
-
-typedef struct {
-    train_t* trains;
-    size_t count;
-} line_t;
-
 //static line_t lines[LINE_COUNT];
 
 int timestamp_subtract(const char* arrival_ts)
