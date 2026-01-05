@@ -2,15 +2,20 @@
 
 import csv
 
+from pathlib import Path
+
+script_path = Path(__file__).resolve()
+script_dir = script_path.parent
+
 line_names = [
     'RED_LINE',
     'BLUE_LINE',
-    #'GREEN_LINE',
-    #'BROWN_LINE',
-    #'PURPLE_LINE',
-    #'YELLOW_LINE',
-    #'PINK_LINE',
-    #'ORANGE_LINE',
+    'GREEN_LINE',
+    'BROWN_LINE',
+    'PURPLE_LINE',
+    'YELLOW_LINE',
+    'PINK_LINE',
+    'ORANGE_LINE',
 ]
 
 class led:
@@ -22,25 +27,24 @@ class led:
         self.index = 0
         self.line = ''
 
-class Station:
+class Stop:
     def __init__(self):
-        self.name = ''
-        self.id = ''
-        self.connections = list[str]()
+        self.next = ''
+        self.prev = ''
 
 class Line:
     def __init__(self):
         self.name = ''
-        self.stations = list[Station]()
-        self.directions = list[list[str]]()
+        self.stations = dict[str, Stop]()
 
-def parse_leds() -> list[led]:
-    with open('system_info/leds.txt') as f:
+def parse_leds() -> dict[str, list[led]]:
+    with open(script_dir.joinpath('leds.txt')) as f:
         lines = f.readlines()
     i = 0
-    leds = list[led]()
+    leds = dict()
     stations_seen = set[str]()
     cta_line = ''
+    prev_station = ''
     for line in lines:
         [count_str, station] = line.split(',', 1)
         station = station.strip()
@@ -48,45 +52,38 @@ def parse_leds() -> list[led]:
         if count < 0:
             stations_seen = set[str]()
             cta_line = station
+            leds[cta_line] = list[led]()
         else:
             for x in range(count):
-                leds.append(led())
-                leds[-1].type = 'rail'
-                leds[-1].index = i
-                leds[-1].line = cta_line
+                leds[cta_line].append(led())
+                leds[cta_line][-1].type = 'rail'
+                leds[cta_line][-1].index = i
+                leds[cta_line][-1].line = cta_line
+                leds[cta_line][-1].prev_station = prev_station
+                leds[cta_line][-1].next_station = station
                 i += 1
             if station not in stations_seen:
-                leds.append(led())
-                leds[-1].type = 'station'
-                leds[-1].index = i
-                leds[-1].line = cta_line
-                leds[-1].station = station
+                leds[cta_line].append(led())
+                leds[cta_line][-1].type = 'station'
+                leds[cta_line][-1].index = i
+                leds[cta_line][-1].line = cta_line
+                leds[cta_line][-1].station = station
                 stations_seen.add(station)
                 i += 1
+        prev_station = station
     return leds
 
 def parse_line(filename : str, name: str) -> Line:
     line = Line()
     line.name = name
-    with open(filename) as f:
-        stations = f.readlines()
-    hints = stations.pop(0).strip()
-    directions = hints.split('(')
-    directions.pop(0)
-    for d in directions:
-        d = d.replace(')', '').replace('\"', '')
-        line.directions.append(d.split(','))
-    for station in stations:
-        [name, rest] = station.split('->')
-        line.stations.append(Station())
-        name = name.strip().replace('\"', '')
-        line.stations[-1].name = name
-        rest_stations = rest.split('\"')
-        for i in range(len(rest_stations)):
-            if i % 2 == 1:
-                line.stations[-1].connections.append(rest_stations[i])
+    with open(script_dir.joinpath(filename)) as f:
+        stops = f.readlines()
+    for i, stop in enumerate(stops):
+        stop = stop.strip()
+        line.stations[stop] = Stop()
+        line.stations[stop].prev = stops[i - 1].strip()
+        line.stations[stop].next = stops[(i + 1) % len(stops)].strip()
     return line
-
 
 def get_line(line_info : list[str]) -> list[str]:
     lines = list()
@@ -114,14 +111,14 @@ def get_enum(original : str) -> str:
         name = '_' + name
     return name
 
-lines = list[Line]()
+lines = dict[str, Line]()
 for line in line_names:
-    lines.append(parse_line(f'system_info/lines/{line}.txt', line))
+    lines[line] = (parse_line(f'lines/{line}.txt', line))
 leds = parse_leds()
 
 station_indices = dict()
 i = 0
-with open('system_info/cta.csv') as csvfile:
+with open(script_dir.joinpath('cta.csv')) as csvfile:
     reader = csv.DictReader(csvfile)
     for row in reader:
         station_name = row['STATION_DESCRIPTIVE_NAME']
@@ -137,26 +134,57 @@ with open('system_info/cta.csv') as csvfile:
         lon = coords[1].strip()
         # Find LEDs with this station
         led_map = dict()
-        for l in leds:
-            if l.type == 'station' and l.station == station_name:
-                led_map[l.line] = l.index
+        for line, led_list in leds.items():
+            for l in led_list:
+                if l.type == 'station' and l.station == station_name:
+                    led_map[l.line] = l.index
         print(f'{{ .id = {station_id}, .location = {{ {lat}f, {lon}f }}, .led_index = {{ ', end='')
         for line_index, index in led_map.items():
             print(f'[{line_index}] = {index}', end=', ')
-        print('}}')
+        print('}},')
 
-with open('system_info/cta.csv') as csvfile:
+stop_station_map = dict()
+with open(script_dir.joinpath('cta.csv')) as csvfile:
     reader = csv.DictReader(csvfile)
     for row in reader:
-        stop_id = get_enum(row['STOP_NAME'])
+        stop_station_map[row['STOP_NAME']] = row['STATION_DESCRIPTIVE_NAME']
+
+with open(script_dir.joinpath('cta.csv')) as csvfile:
+    reader = csv.DictReader(csvfile)
+    for row in reader:
+        stop_name = row['STOP_NAME']
+        stop_id = get_enum(stop_name)
         station = row['STATION_DESCRIPTIVE_NAME']
         station_idx = station_indices[station]
 
         line_info = [row['RED'], row['BLUE'],row['G'],row['BRN'],row['P'],row['Y'],row['Pnk'], row['O']]
         lines_info = get_line(line_info)
         line_flag = ''
+        led_starts = dict()
+        led_counts = dict()
         for i, line in enumerate(lines_info):
             if i > 0:
                 line_flag += ' | '
             line_flag += 'FLAG_' + line
-        print(f'[INDEX({stop_id})] = {{ .id = {stop_id}, .line = {line_flag}, .station = {station_idx},')
+            led_counts[line] = 0
+            led_starts[line] = -1
+            try:
+                prev = lines[line].stations[stop_name].prev
+                prev_station = stop_station_map[prev]
+            except:
+                continue
+            for l in leds[line]:
+                if l.type == 'station':
+                    continue
+                if l.next_station == station and l.prev_station == prev_station:
+                    if led_starts[line] == -1:
+                        led_starts[line] = l.index
+                    led_counts[line] += 1
+                elif l.prev_station == station and l.next_station == prev_station:
+                    if led_starts[line] < l.index:
+                        led_starts[line] = l.index
+                    led_counts[line] -= 1
+        print(f'[INDEX({stop_id})] = {{ .line = {line_flag}, .station = {station_idx}, .led = {{ ', end='')
+        for line in lines_info:
+            print(f'[{line}] = {{ .start = {led_starts[line]}, .count = {led_counts[line]} }}, ', end='')
+        print('}},')

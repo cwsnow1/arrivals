@@ -27,17 +27,6 @@ typedef enum {
     FLAG_ORANGE_LINE = 1 << ORANGE_LINE,
 } __attribute__((__packed__)) line_flag_t;
 
-typedef struct {
-    uint32_t run;
-    uint32_t next;
-    uint32_t original_estimate;
-} train_t;
-
-typedef struct {
-    train_t* trains;
-    size_t count;
-} line_t;
-
 typedef enum {
     _18TH_PINK                                                         = 40830,
     _35TH_ARCHER_ORANGE                                                = 40120,
@@ -506,12 +495,15 @@ typedef struct {
     int8_t count;
 } led_index_t;
 
+typedef struct {
+    led_index_t rail;
+    uint16_t station;
+} led_segment_t;
+
 typedef struct stop {
     line_flag_t line;
     uint8_t station_idx;
     led_index_t led[LINE_COUNT];
 } stop_t;
 
-led_index_t cta_get_led_index(size_t stop_id);
-
-
+led_segment_t cta_get_leds(size_t stop_id, line_name_t line);

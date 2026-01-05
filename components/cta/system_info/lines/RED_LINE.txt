@@ -1,34 +1,66 @@
-("Howard-bound")("95th-bound")
-"95th/Dan Ryan (Red Line)" -> "87th (Red Line)"
-"87th (Red Line)" -> "79th (Red Line)", "95th/Dan Ryan (Red Line)"
-"79th (Red Line)" -> "69th (Red Line)", "87th (Red Line)"
-"69th (Red Line)" -> "63rd (Red Line)", "79th (Red Line)"
-"63rd (Red Line)" -> "Garfield (Red Line)", "69th (Red Line)"
-"Garfield (Red Line)" -> "47th (Red Line)", "63rd (Red Line)"
-"47th (Red Line)" -> "Sox-35th (Red Line)", "Garfield (Red Line)"
-"Sox-35th (Red Line)" -> "Cermak-Chinatown (Red Line)", "47th (Red Line)"
-"Cermak-Chinatown (Red Line)" -> "Roosevelt (Red, Orange & Green lines)", "Sox-35th (Red Line)"
-"Roosevelt (Red, Orange & Green lines)" -> "Harrison (Red Line)", "Cermak-Chinatown (Red Line)"
-"Harrison (Red Line)" -> "Jackson (Red Line)", "Roosevelt (Red, Orange & Green lines)"
-"Jackson (Red Line)" -> "Monroe (Red Line)", "Harrison (Red Line)"
-"Monroe (Red Line)" -> "Lake (Red Line)", "Jackson (Red Line)"
-"Lake (Red Line)" -> "Grand (Red Line)", "Monroe (Red Line)"
-"Grand (Red Line)" -> "Chicago (Red Line)", "Lake (Red Line)"
-"Chicago (Red Line)" -> "Clark/Division (Red Line)", "Grand (Red Line)"
-"Clark/Division (Red Line)" -> "North/Clybourn (Red Line)", "Chicago (Red Line)"
-"North/Clybourn (Red Line)" -> "Fullerton (Red, Brown & Purple lines)", "Clark/Division (Red Line)"
-"Fullerton (Red, Brown & Purple lines)" -> "Belmont (Red, Brown & Purple lines)", "North/Clybourn (Red Line)"
-"Belmont (Red, Brown & Purple lines)" -> "Addison (Red Line)", "Fullerton (Red, Brown & Purple lines)"
-"Addison (Red Line)" -> "Sheridan (Red Line)", "Belmont (Red, Brown & Purple lines)"
-"Sheridan (Red Line)" -> "Wilson (Red & Purple lines)", "Addison (Red Line)"
-"Wilson (Red & Purple lines)" -> "Lawrence (Red Line)", "Sheridan (Red Line)"
-"Lawrence (Red Line)" -> "Argyle (Red Line)", "Wilson (Red & Purple lines)"
-"Argyle (Red Line)" -> "Berwyn (Red Line)", "Lawrence (Red Line)"
-"Berwyn (Red Line)" -> "Bryn Mawr (Red Line)", "Argyle (Red Line)"
-"Bryn Mawr (Red Line)" -> "Thorndale (Red Line)", "Berwyn (Red Line)"
-"Thorndale (Red Line)" -> "Granville (Red Line)", "Bryn Mawr (Red Line)"
-"Granville (Red Line)" -> "Loyola (Red Line)", "Thorndale (Red Line)"
-"Loyola (Red Line)" -> "Morse (Red Line)", "Granville (Red Line)"
-"Morse (Red Line)" -> "Jarvis (Red Line)", "Loyola (Red Line)"
-"Jarvis (Red Line)" -> "Howard (Red, Purple & Yellow lines)", "Morse (Red Line)"
-"Howard (Red, Purple & Yellow lines)" -> "Jarvis (Red Line)"
+95th/Dan Ryan (Howard-bound)
+87th (Howard-bound)
+79th (Howard-bound)
+69th (Howard-bound)
+63rd (Howard-bound)
+Garfield (Howard-bound)
+47th (Howard-bound)
+Sox-35th (Howard-bound)
+Cermak-Chinatown (Howard-bound)
+Roosevelt (Howard-bound)
+Harrison (Howard-bound)
+Jackson (Howard-bound)
+Monroe (Howard-bound)
+Lake (Howard-bound)
+Grand (Howard-bound)
+Chicago (Howard-bound)
+Clark/Division (Howard-bound)
+North/Clybourn (Howard-bound)
+Fullerton (Howard-bound)
+Belmont (Howard-bound)
+Addison (Howard-bound)
+Sheridan (Howard-bound)
+Wilson (Howard-bound)
+Lawrence (Howard-bound)
+Argyle (Howard-bound)
+Berwyn (Howard-bound)
+Bryn Mawr (Howard-bound)
+Thorndale (Howard-bound)
+Granville (Howard-bound)
+Loyola (Howard-bound)
+Morse (Howard-bound)
+Jarvis (Howard-bound)
+Howard (Terminal arrival)
+Howard (95th-bound)
+Jarvis (95th-bound)
+Morse (95th-bound)
+Loyola (95th-bound)
+Granville (95th-bound)
+Thorndale (95th-bound)
+Bryn Mawr (95th-bound)
+Berwyn (95th-bound)
+Argyle (95th-bound)
+Lawrence (95th-bound)
+Wilson (95th-bound)
+Sheridan (95th-bound)
+Addison (95th-bound)
+Belmont (95th-bound)
+Fullerton (95th-bound)
+North/Clybourn (95th-bound)
+Clark/Division (95th-bound)
+Chicago (95th-bound)
+Grand (95th-bound)
+Lake (95th-bound)
+Monroe (95th-bound)
+Jackson (95th-bound)
+Harrison (95th-bound)
+Roosevelt (95th-bound)
+Cermak-Chinatown (95th-bound)
+Sox-35th (95th-bound)
+47th (95th-bound)
+Garfield (95th-bound)
+63rd (95th-bound)
+69th (95th-bound)
+79th (95th-bound)
+87th (95th-bound)
+95th/Dan Ryan (95th-bound)

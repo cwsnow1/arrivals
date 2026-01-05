@@ -9,11 +9,22 @@
 
 static const char* TAG = "api";
 
-#define API_ENDPOINT(line) "http://lapi.transitchicago.com/api/1.0/ttpositions.aspx?rt=" line "&outputType=JSON&key=" CONFIG_API_KEY
+#define API_ENDPOINT "http://lapi.transitchicago.com/api/1.0/ttpositions.aspx?rt=%s&outputType=JSON&key=" CONFIG_API_KEY
 
-//static line_t lines[LINE_COUNT];
+static const char* line_names[] = {
+    [RED_LINE] = "red",
+    [BLUE_LINE] = "blue",
+    [GREEN_LINE] = "g",
+    [BROWN_LINE] = "brn",
+    [PURPLE_LINE] = "p",
+    [YELLOW_LINE] = "y",
+    [PINK_LINE] = "pink",
+    [ORANGE_LINE] = "org",
+};
 
-int timestamp_subtract(const char* arrival_ts)
+static line_t s_lines[LINE_COUNT];
+
+static int timestamp_subtract(const char* arrival_ts)
 {
     int year, month, day, hour, minute, second;
     sscanf(arrival_ts, "%04d-%02d-%02dT%02d:%02d:%02d", &year, &month, &day, &hour, &minute, &second);
@@ -30,7 +41,7 @@ int timestamp_subtract(const char* arrival_ts)
     return mktime(&t) - time(NULL);
 }
 
-static void decode(http_response_t r)
+static void decode(http_response_t r, line_name_t line)
 {
     jparse_ctx_t ctx;
     int err = 0;
@@ -68,28 +79,47 @@ static void decode(http_response_t r)
             json_obj_get_string(&ctx, "rn", buffer, sizeof buffer);
             int rn = strtol(buffer, NULL, 10);
 
+            train_t* train = NULL;
+            for (size_t i = 0; i < s_lines[line].count; ++i) {
+                if (s_lines[line].trains[i].rn == rn) {
+                    train = &s_lines[line].trains[i];
+                    break;
+                }
+            }
+            if (!train) {
+                s_lines[line].count++;
+                s_lines[line].trains = realloc(s_lines[line].trains, sizeof(*s_lines[line].trains) * s_lines[line].count);
+                train = &s_lines[line].trains[s_lines[line].count - 1];
+            }
+            train->rn = rn;
+
+            json_obj_get_string(&ctx, "nextStpId", buffer, sizeof buffer);
+            train->next_stop = strtoul(buffer, NULL, 10);
+
             json_obj_get_string(&ctx, "nextStaNm", buffer, sizeof buffer);
-            printf("Run %d arrival at %-30s ", rn, buffer);
+            //printf("Run %d arrival at %-30s ", rn, buffer);
 
             json_obj_get_string(&ctx, "arrT", buffer, sizeof buffer);
-            printf("at %s, seconds remaining: %4d ", buffer, timestamp_subtract(buffer));
+            //printf("at %s, seconds remaining: %4d ", buffer, timestamp_subtract(buffer));
 
             json_obj_get_string(&ctx, "lat", buffer, sizeof buffer);
-            printf("%8s ", buffer);
+            //printf("%8s ", buffer);
 
             json_obj_get_string(&ctx, "lon", buffer, sizeof buffer);
-            printf("%8s ", buffer);
+            //printf("%8s ", buffer);
 
             json_obj_get_string(&ctx, "isApp", buffer, sizeof buffer);
             if (!strcmp(buffer, "1")) {
-                printf(" (APP)");
+                train->progress = 1.0f;
+            } else {
+                train->progress = 0.0f;
             }
 
             json_obj_get_string(&ctx, "isDly", buffer, sizeof buffer);
             if (!strcmp(buffer, "1")) {
-                printf(" (DELAY)");
+                //printf(" (DELAY)");
             }
-            printf("\n");
+            //printf("\n");
 
             json_arr_leave_object(&ctx);
         }
@@ -102,15 +132,19 @@ err:
     free(r.buffer);
 }
 
-void api_get(void)
+line_t* api_get(void)
 {
     ESP_LOGD(TAG, "Starting requests");
-    http_response_t blue  = http_get_and_keep_open(API_ENDPOINT("blue"));
-    http_response_t red   = http_get_and_keep_open(API_ENDPOINT("red"));
-    http_response_t brown = http_get_and_keep_open(API_ENDPOINT("brn"));
+    http_response_t responses[LINE_COUNT];
+    char url[128];
+    for (size_t i = 0; i < LINE_COUNT; ++i) {
+        sprintf(url, API_ENDPOINT, line_names[i]);
+        responses[i] = http_get_and_keep_open(url);
+    }
     http_close();
     ESP_LOGD(TAG, "Done");
-    decode(blue);
-    decode(red);
-    decode(brown);
+    for (size_t i = 0; i < LINE_COUNT; ++i) {
+        decode(responses[i], i);
+    }
+    return s_lines;
 }

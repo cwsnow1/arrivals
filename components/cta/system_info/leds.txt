@@ -138,7 +138,7 @@
 1, Kedzie (Green Line)
 1, California (Green Line)
 4, Damen (Green Line)
-3, Ashland/63rd (Green Line)
+3, Ashland (Green & Pink lines)
 0, Morgan (Green & Pink lines)
 0, Clinton (Green & Pink lines)
 3, Clark/Lake (Blue, Brown, Green, Orange, Purple & Pink lines)

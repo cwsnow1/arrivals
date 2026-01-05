@@ -1,34 +1,66 @@
-("O'Hare-bound") ("Forest Pk-bound")
-"Forest Park (Blue Line)" -> "Harlem (Blue Line - Forest Park Branch)"
-"Harlem (Blue Line - Forest Park Branch)" -> "Oak Park (Blue Line)", "Forest Park (Blue Line)"
-"Oak Park (Blue Line)" -> "Austin (Blue Line)", "Harlem (Blue Line - Forest Park Branch)"
-"Austin (Blue Line)" -> "Cicero (Blue Line)", "Oak Park (Blue Line)"
-"Cicero (Blue Line)" -> "Pulaski (Blue Line)", "Austin (Blue Line)"
-"Pulaski (Blue Line)" -> "Kedzie-Homan (Blue Line)", "Cicero (Blue Line)"
-"Kedzie-Homan (Blue Line)" -> "Western (Blue Line - Forest Park Branch)", "Pulaski (Blue Line)"
-"Western (Blue Line - Forest Park Branch)" -> "Illinois Medical District (Blue Line)", "Kedzie-Homan (Blue Line)"
-"Illinois Medical District (Blue Line)" -> "Racine (Blue Line)", "Western (Blue Line - Forest Park Branch)"
-"Racine (Blue Line)" -> "UIC-Halsted (Blue Line)", "Illinois Medical District (Blue Line)"
-"UIC-Halsted (Blue Line)" -> "Clinton (Blue Line)", "Racine (Blue Line)"
-"Clinton (Blue Line)" -> "LaSalle (Blue Line)", "UIC-Halsted (Blue Line)"
-"LaSalle (Blue Line)" -> "Jackson (Blue Line)", "Clinton (Blue Line)"
-"Jackson (Blue Line)" -> "Monroe (Blue Line)", "LaSalle (Blue Line)"
-"Monroe (Blue Line)" -> "Washington (Blue Line)", "Jackson (Blue Line)"
-"Washington (Blue Line)" -> "Clark/Lake (Blue, Brown, Green, Orange, Purple & Pink lines)", "Monroe (Blue Line)"
-"Clark/Lake (Blue, Brown, Green, Orange, Purple & Pink lines)" -> "Grand (Blue Line)", "Washington (Blue Line)"
-"Grand (Blue Line)" -> "Chicago (Blue Line)", "Clark/Lake (Blue, Brown, Green, Orange, Purple & Pink lines)"
-"Chicago (Blue Line)" -> "Division (Blue Line)", "Grand (Blue Line)"
-"Division (Blue Line)" -> "Damen (Blue Line)", "Chicago (Blue Line)"
-"Damen (Blue Line)" -> "Western (Blue Line - O'Hare Branch)", "Division (Blue Line)"
-"Western (Blue Line - O'Hare Branch)" -> "California (Blue Line)", "Damen (Blue Line)"
-"California (Blue Line)" -> "Logan Square (Blue Line)", "Western (Blue Line - O'Hare Branch)"
-"Logan Square (Blue Line)" -> "Belmont (Blue Line)", "California (Blue Line)"
-"Belmont (Blue Line)" -> "Addison (Blue Line)", "Logan Square (Blue Line)"
-"Addison (Blue Line)" -> "Irving Park (Blue Line)", "Belmont (Blue Line)"
-"Irving Park (Blue Line)" -> "Montrose (Blue Line)", "Addison (Blue Line)"
-"Montrose (Blue Line)" -> "Jefferson Park (Blue Line)", "Irving Park (Blue Line)"
-"Jefferson Park (Blue Line)" -> "Harlem (Blue Line - O'Hare Branch)", "Montrose (Blue Line)"
-"Harlem (Blue Line - O'Hare Branch)" -> "Cumberland (Blue Line)", "Jefferson Park (Blue Line)"
-"Cumberland (Blue Line)" -> "Rosemont (Blue Line)", "Harlem (Blue Line - O'Hare Branch)"
-"Rosemont (Blue Line)" -> "O'Hare (Blue Line)", "Cumberland (Blue Line)"
-"O'Hare (Blue Line)" -> "Rosemont (Blue Line)"
+Forest Park (O'Hare-bound)
+Harlem (Forest Pk Branch) (O'Hare-bound)
+Oak Park (O'Hare-bound)
+Austin (O'Hare-bound)
+Cicero (O'Hare-bound)
+Pulaski (O'Hare-bound)
+Kedzie-Homan (O'Hare-bound)
+Western (Forest Pk Branch) (O'Hare-bound)
+Illinois Medical District (O'Hare-bound)
+Racine (O'Hare-bound)
+UIC-Halsted (O'Hare-bound)
+Clinton (O'Hare-bound)
+LaSalle (O'Hare-bound)
+Jackson (O'Hare-bound)
+Monroe (O'Hare-bound)
+Washington (O'Hare-bound)
+Clark/Lake (O'Hare-bound)
+Grand (O'Hare-bound)
+Chicago (O'Hare-bound)
+Division (O'Hare-bound)
+Damen (O'Hare-bound)
+Western (O'Hare Branch) (O'Hare-bound)
+California (O'Hare-bound)
+Logan Square (O'Hare-bound)
+Belmont (O'Hare-bound)
+Addison (O'Hare-bound)
+Irving Park (O'Hare-bound)
+Montrose (O'Hare-bound)
+Jefferson Park (O'Hare-bound)
+Harlem (O'Hare Branch) (O'Hare-bound)
+Cumberland (O'Hare-bound)
+Rosemont (O'Hare-bound)
+O'Hare (Terminal Arrival)
+O'Hare (Forest Pk-bound)
+Rosemont (Forest Pk-bound)
+Cumberland (Forest Pk-bound)
+Harlem (O'Hare Branch) (Forest Pk-bound)
+Jefferson Park (Forest Pk-bound)
+Montrose (Forest Pk-bound)
+Irving Park (Forest Pk-bound)
+Addison (Forest Pk-bound)
+Belmont (Forest Pk-bound)
+Logan Square (Forest Pk-bound)
+California (Forest Pk-bound)
+Western (O'Hare Branch) (Forest Pk-bound)
+Damen (Forest Pk-bound)
+Division (Forest Pk-bound)
+Chicago (Forest Pk-bound)
+Grand (Forest Pk-bound)
+Clark/Lake (Forest Pk-bound)
+Washington (Forest Pk-bound)
+Monroe (Forest Pk-bound)
+Jackson (Forest Pk-bound)
+LaSalle (Forest Pk-bound)
+Clinton (Forest Pk-bound)
+UIC-Halsted (Forest Pk-bound)
+Racine (Forest Pk-bound)
+Illinois Medical District (Forest Pk-bound)
+Western (Forest Pk Branch) (Forest Pk-bound)
+Kedzie-Homan (Forest Pk-bound)
+Pulaski (Forest Pk-bound)
+Cicero (Forest Pk-bound)
+Austin (Forest Pk-bound)
+Oak Park (Forest Pk-bound)
+Harlem (Forest Pk Branch) (Forest Pk-bound)
+Forest Park (Terminal Arrival)

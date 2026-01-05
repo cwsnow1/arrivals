@@ -12,6 +12,7 @@ set(COMPONENT_PRIV_REQUIRES
 )
 
 set(COMPONENT_REQUIRES
+    cta
 )
 
 register_component()
