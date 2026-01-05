@@ -170,9 +170,9 @@ with open(script_dir.joinpath('cta.csv')) as csvfile:
             led_starts[line] = -1
             try:
                 prev = lines[line].stations[stop_name].prev
-                prev_station = stop_station_map[prev]
             except:
                 continue
+            prev_station = stop_station_map[prev]
             for l in leds[line]:
                 if l.type == 'station':
                     continue
