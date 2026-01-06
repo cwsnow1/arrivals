@@ -1,14 +1,24 @@
 #pragma once
 
 #include <stdbool.h>
+#include "lvgl.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
+#define UI_NUM_ROWS (3)
+
 typedef void(*lock_fn_t)(bool);
 
 void ui_init(lock_fn_t lock_fn);
+void ui_set_station(const char* station_name);
+void ui_set_row(int row_idx,
+                const char* dest,
+                int rn,
+                const char* line_name,
+                lv_color_t line_color,
+                int min_remaining);
 
 #ifdef __cplusplus
 }

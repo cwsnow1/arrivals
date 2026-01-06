@@ -14,6 +14,17 @@ static uint16_t frame_buffer[LCD_H * LCD_V];
 static lv_indev_t* indev;
 static lv_indev_t* button_indev;
 
+static const lv_color_t line_colors[] = {
+    { .red = 227, .green =  55, .blue =  25 }, // red
+    { .red =   0, .green = 157, .blue = 220 }, // blue
+    { .red =   0, .green = 169, .blue =  79 }, // green
+    { .red = 118, .green =  66, .blue =   0 }, // brown
+    { .red =  73, .green =  47, .blue = 146 }, // purple
+    { .red = 255, .green = 232, .blue =   0 }, // yellow
+    { .red = 243, .green = 139, .blue = 185 }, // pink
+    { .red = 244, .green = 120, .blue =  54 }, // orange
+};
+
 static void action_cb(void* user_data)
 {
     printf("[ACTION] User data: %zu\n", (size_t) user_data);
@@ -96,6 +107,10 @@ int main(void)
     float t_next = 0;
 
     ui_init(lock);
+
+    ui_set_row(0, "95th/Dan Ryan", 814, "Red", line_colors[0], 1);
+    ui_set_row(1, "Harlem", 345, "Green", line_colors[2], 4);
+    ui_set_station("State/Lake");
 
     while (!WindowShouldClose()) {
         t += GetFrameTime();
