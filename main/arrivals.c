@@ -14,9 +14,7 @@
 #include "api.h"
 #include "cta.h"
 #include "display.h"
-
-#include "lvgl.h"
-#include "lv_demos.h"
+#include "ui.h"
 
 static const char* TAG = "main";
 
@@ -29,8 +27,8 @@ typedef struct {
 static const color_t line_colors[LINE_COUNT] = {
     [RED_LINE]    = { .r = 3, .g = 0, .b = 0 },
     [BLUE_LINE]   = { .r = 0, .g = 2, .b = 4 },
-    [GREEN_LINE]  = { .r = 3, .g = 3, .b = 0 },
-    [BROWN_LINE]  = { .r = 1, .g = 1, .b = 0 },
+    [GREEN_LINE]  = { .r = 1, .g = 3, .b = 0 },
+    [BROWN_LINE]  = { .r = 2, .g = 1, .b = 0 },
     [PURPLE_LINE] = { .r = 1, .g = 1, .b = 4 },
     [YELLOW_LINE] = { .r = 3, .g = 3, .b = 0 },
     [PINK_LINE]   = { .r = 3, .g = 1, .b = 1 },
@@ -102,9 +100,7 @@ void app_main(void)
     display_cfg.touch.bus = i2c_bus;
     display_init(&display_cfg);
 
-    display_lock();
-    lv_demo_widgets();
-    display_unlock();
+    ui_init(display_lock);
 
     #define NUM_LEDS 511
     led_strip_config_t led_cfg = {

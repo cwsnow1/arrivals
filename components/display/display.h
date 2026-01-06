@@ -40,5 +40,4 @@ void display_sleep(void);
 uint8_t display_get_brightness(void);
 void display_set_brightness(uint8_t brightness, uint32_t transition_time_ms);
 bool display_touch_timeout(void);
-void display_lock(void);
-void display_unlock(void);
+void display_lock(bool en);

@@ -237,14 +237,12 @@ static void lvgl_port_task(void* arg)
     }
 }
 
-void display_lock(void)
+void display_lock(bool en)
 {
-    _lock_acquire(&lvgl_api_lock);
-}
-
-void display_unlock(void)
-{
-    _lock_release(&lvgl_api_lock);
+    if (en)
+        _lock_acquire(&lvgl_api_lock);
+    else
+        _lock_release(&lvgl_api_lock);
 }
 
 static void init_lvgl(esp_lcd_panel_handle_t panel, esp_lcd_panel_io_handle_t io)

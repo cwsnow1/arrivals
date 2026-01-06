@@ -131,7 +131,7 @@ static const station_t stations[] = {
     { .id = ROOSEVELT_RED_ORANGE_GREEN, .location = { 41.867368f, -87.627402f }, .led_index = { [RED_LINE] = 41, [GREEN_LINE] = 358, [ORANGE_LINE] = 424, }},
     { .id = ROSEMONT_BLUE, .location = { 41.983507f, -87.859388f }, .led_index = { [BLUE_LINE] = 301, }},
     { .id = SEDGWICK_BROWN_PURPLE, .location = { 41.910409f, -87.639302f }, .led_index = { [PURPLE_LINE] = 121, [BROWN_LINE] = 490, }},
-    { .id = SHERIDAN_RED, .location = { 41.953775f, -87.654929f }, .led_index = { [RED_LINE] = 66, }},
+    { .id = SHERIDAN_RED, .location = { 41.953775f, -87.654929f }, .led_index = { [RED_LINE] = 66, [PURPLE_LINE] = 111, }},
     { .id = SOUTH_BOULEVARD_PURPLE, .location = { 42.027612f, -87.678329f }, .led_index = { [PURPLE_LINE] = 98, }},
     { .id = SOUTHPORT_BROWN, .location = { 41.943744f, -87.663619f }, .led_index = { [BROWN_LINE] = 498, }},
     { .id = SOX_35TH_RED, .location = { 41.831191f, -87.630636f }, .led_index = { [RED_LINE] = 35, }},
