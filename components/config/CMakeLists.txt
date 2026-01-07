@@ -8,9 +8,8 @@ set(COMPONENT_ADD_INCLUDEDIRS
 )
 
 set(COMPONENT_PRIV_REQUIRES
-    esp_timer
-    http_server
-    esp_wifi
+    nvs_flash
+    display
 )
 
 set(COMPONENT_REQUIRES

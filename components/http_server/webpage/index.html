@@ -1,0 +1,299 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <title>Train Tracker Config</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        body {
+            background: #eee;
+            width: 60vw;
+            margin: 15vh auto;
+            font-family: system-ui, sans-serif
+        }
+
+        h1 {
+            font-size: 1.5em
+        }
+
+        .container {
+            opacity: 0.8;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+        input[type="text"],
+        input[type="password"],
+        input[type="number"],
+        select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+
+        input[type="color"] {
+            width: 100%;
+            height: 40px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            cursor: pointer;
+        }
+
+        a:link,
+        a:visited {
+            color: #348
+        }
+
+        .button-group {
+            margin-top: 20px;
+            display: flex;
+            gap: 10px;
+        }
+
+        button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1em;
+        }
+
+        button.save {
+            background: #4a9;
+            color: white;
+        }
+
+        button.save:hover {
+            background: #3a8;
+        }
+
+        button.reboot {
+            background: #e55;
+            color: white;
+        }
+
+        button.reboot:hover {
+            background: #d44;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>Train Tracker Config</h1>
+        
+        <form id="configForm">
+            <div class="form-group">
+                <label for="ssid_select">SSID</label>
+                <select id="ssid_select" onchange="onSsidChange()">
+                    <option value="">Scanning...</option>
+                </select>
+                <input type="text" id="ssid" name="ssid" placeholder="Enter custom SSID" style="display: none; margin-top: 8px;" required>
+            </div>
+
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input type="password" id="password" name="password">
+            </div>
+
+            <div class="form-group">
+                <label for="led_mode">LED Mode</label>
+                <select id="led_mode" name="led_mode">
+                    <option value="0">Off</option>
+                    <option value="1">Line Colors</option>
+                    <option value="2">Live Tracking</option>
+                    <option value="3">Random Colors</option>
+                    <option value="4">Solid Color</option>
+                    <option value="5">Marquee</option>
+                    <option value="6">Breathing</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="led_color">LED Color</label>
+                <input type="color" id="led_color" name="led_color" value="#000000">
+            </div>
+
+            <div class="form-group">
+                <label for="lcd_mode">LCD Mode</label>
+                <select id="lcd_mode" name="lcd_mode">
+                    <option value="0">Off</option>
+                    <option value="1">Arrivals</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="lcd_brightness">LCD Brightness: <span id="brightness_value">50</span>%</label>
+                <input type="range" id="lcd_brightness" name="lcd_brightness" min="0" max="100" value="50"
+                    oninput="document.getElementById('brightness_value').textContent = this.value">
+            </div>
+
+            <div class="button-group">
+                <button type="button" class="save" onclick="saveConfig()">Save Config</button>
+                <button type="button" class="reboot" onclick="rebootDevice()">Reboot</button>
+            </div>
+        </form>
+    </div>
+
+    <script>
+        let currentSsid = '';
+
+        function scanNetworks() {
+            fetch('/scan', { method: 'POST' })
+                .then(response => response.json())
+                .then(networks => {
+                    const select = document.getElementById('ssid_select');
+                    select.innerHTML = '';
+
+                    networks.forEach(network => {
+                        const option = document.createElement('option');
+                        option.value = network;
+                        option.textContent = network;
+                        select.appendChild(option);
+                    });
+
+                    const customOption = document.createElement('option');
+                    customOption.value = '__custom__';
+                    customOption.textContent = '-- Enter custom SSID --';
+                    select.appendChild(customOption);
+
+                    if (currentSsid) {
+                        const exists = networks.includes(currentSsid);
+                        if (exists) {
+                            select.value = currentSsid;
+                        } else {
+                            select.value = '__custom__';
+                            document.getElementById('ssid').value = currentSsid;
+                            onSsidChange();
+                        }
+                    }
+                })
+                .catch(error => {
+                    console.error('Failed to scan networks:', error);
+                    const select = document.getElementById('ssid_select');
+                    select.innerHTML = '<option value="__custom__">-- Enter custom SSID --</option>';
+                    onSsidChange();
+                });
+        }
+
+        function onSsidChange() {
+            const select = document.getElementById('ssid_select');
+            const input = document.getElementById('ssid');
+            if (select.value === '__custom__') {
+                input.style.display = 'block';
+            } else {
+                input.style.display = 'none';
+                input.value = select.value;
+            }
+        }
+
+        function loadConfig() {
+            fetch('/config')
+                .then(response => response.json())
+                .then(config => {
+                    if (config.ssid !== undefined) {
+                        currentSsid = config.ssid;
+                        document.getElementById('ssid').value = config.ssid;
+                    }
+                    if (config.password !== undefined) {
+                        document.getElementById('password').value = config.password;
+                    }
+                    if (config.led_mode !== undefined) {
+                        document.getElementById('led_mode').value = config.led_mode;
+                    }
+                    if (config.led_color !== undefined) {
+                        document.getElementById('led_color').value = config.led_color;
+                    }
+                    if (config.lcd_mode !== undefined) {
+                        document.getElementById('lcd_mode').value = config.lcd_mode;
+                    }
+                    if (config.lcd_brightness !== undefined) {
+                        const brightness = Math.round((parseInt(config.lcd_brightness) / 255) * 100);
+                        document.getElementById('lcd_brightness').value = brightness;
+                        document.getElementById('brightness_value').textContent = brightness;
+                    }
+                    scanNetworks();
+                })
+                .catch(error => {
+                    console.error('Failed to load config:', error);
+                    scanNetworks();
+                });
+        }
+
+        document.addEventListener('DOMContentLoaded', loadConfig);
+
+        function saveConfig() {
+            const form = document.getElementById('configForm');
+            const formData = new FormData(form);
+            const config = {};
+            formData.forEach((value, key) => {
+                if (key === 'lcd_brightness') {
+                    config[key] = Math.round((parseInt(value) / 100) * 255);
+                } else if (key == 'password' || key == 'ssid') {
+                    if (value != '') {
+                        config[key] = value;
+                    }
+                } else {
+                    config[key] = value;
+                }
+            });
+
+            fetch('/config', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(config)
+            })
+            .then(response => {
+                if (response.ok) {
+                    alert('Config saved successfully!');
+                } else {
+                    alert('Failed to save config.');
+                }
+            })
+            .catch(error => {
+                alert('Error: ' + error);
+            });
+        }
+
+        function rebootDevice() {
+            if (confirm('Are you sure you want to reboot the device?')) {
+                fetch('/reboot', {
+                    method: 'POST'
+                })
+                .then(response => {
+                    if (response.ok) {
+                        alert('Rebooting device...');
+                    } else {
+                        alert('Failed to reboot.');
+                    }
+                })
+                .catch(error => {
+                    alert('Error: ' + error);
+                });
+            }
+        }
+    </script>
+</body>
+
+</html>
+

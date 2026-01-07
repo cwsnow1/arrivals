@@ -1,6 +1,7 @@
 
 set(COMPONENT_SRCDIRS
     .
+    webpage
 )
 
 set(COMPONENT_ADD_INCLUDEDIRS
@@ -8,8 +9,10 @@ set(COMPONENT_ADD_INCLUDEDIRS
 )
 
 set(COMPONENT_PRIV_REQUIRES
+    esp_http_server
     esp_timer
-    http_server
+    wifi
+    config
     esp_wifi
 )
 

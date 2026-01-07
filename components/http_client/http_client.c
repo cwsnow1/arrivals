@@ -2,7 +2,7 @@
 #include "esp_log.h"
 
 #include "wifi.h"
-#include "private/http_client.h"
+#include "http_client.h"
 
 static const char* TAG = "http_client";
 

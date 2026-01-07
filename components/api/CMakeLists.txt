@@ -8,7 +8,7 @@ set(COMPONENT_ADD_INCLUDEDIRS
 
 set(COMPONENT_PRIV_REQUIRES
     wifi
-    esp_http_client
+    http_client
 )
 
 set(COMPONENT_REQUIRES

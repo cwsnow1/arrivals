@@ -18,6 +18,7 @@ set(COMPONENT_PRIV_REQUIRES
     esp_driver_spi
     lvgl
     esp_timer
+    config
 )
 
 register_component()

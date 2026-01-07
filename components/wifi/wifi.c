@@ -10,10 +10,18 @@
 #include "freertos/task.h"
 
 #include "wifi.h"
+#include "http_server.h"
+
+#define WIFI_AP_SSID    "TestAP"
+#define WIFI_AP_PASSWD  "abc12356"
+#define WIFI_AP_CHANNEL 1
+#define MAX_STA_CONN    2
 
 static const char* TAG = "wifi";
 
 static SemaphoreHandle_t s_connected;
+static esp_netif_t* s_netif;
+static esp_netif_t* s_apif;
 
 static char factory_mac[13];
 
@@ -50,14 +58,17 @@ static void event_handler(
     }
 }
 
-void wifi_init(const char* ssid, const char* password)
+void wifi_init(void)
 {
-    s_connected = xSemaphoreCreateBinary();
+    static bool wifi_initialized = false;
+    if (wifi_initialized) {
+        return;
+    }
 
     ESP_ERROR_CHECK(esp_netif_init());
 
     ESP_ERROR_CHECK(esp_event_loop_create_default());
-    esp_netif_create_default_wifi_sta();
+    s_netif = esp_netif_create_default_wifi_sta();
 
     wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
     ESP_ERROR_CHECK(esp_wifi_init(&cfg));
@@ -79,7 +90,12 @@ void wifi_init(const char* ssid, const char* password)
         factory_mac[i] = hex[mac_int & 0xF];
     }
     factory_mac[12] = '\0';
+    wifi_initialized = true;
+    s_connected = xSemaphoreCreateBinary();
+}
 
+void wifi_connect(const char* ssid, const char* password)
+{
     wifi_config_t wifi_cfg = { 0 };
     strncpy((char*) wifi_cfg.sta.ssid, ssid, sizeof(wifi_cfg.sta.ssid) - 1);
     strncpy((char*) wifi_cfg.sta.password, password, sizeof(wifi_cfg.sta.password) - 1);
@@ -90,6 +106,50 @@ void wifi_init(const char* ssid, const char* password)
     ESP_LOGI(TAG, "wifi_init_sta finished.");
 
     ESP_ERROR_CHECK(esp_wifi_connect());
+}
+
+void wifi_init_softap(void)
+{
+    ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_APSTA));
+
+    if (s_apif == NULL) {
+        s_apif = esp_netif_create_default_wifi_ap();
+    }
+
+    wifi_config_t wifi_sta_config = {
+        .sta = {
+            .ssid = {0},
+            .password = {0},
+            .scan_method = WIFI_ALL_CHANNEL_SCAN,
+            .failure_retry_cnt = 0,
+            .threshold.authmode = WIFI_AUTH_OPEN,
+            .sae_pwe_h2e = WPA3_SAE_PWE_BOTH,
+        },
+    };
+    esp_wifi_set_config(WIFI_IF_STA, &wifi_sta_config);
+
+    wifi_config_t wifi_ap_config = {
+        .ap = {
+            .ssid = WIFI_AP_SSID,
+            .ssid_len = strlen(WIFI_AP_SSID),
+            .channel = WIFI_AP_CHANNEL,
+            .password = WIFI_AP_PASSWD,
+            .max_connection = MAX_STA_CONN,
+            .authmode = WIFI_AUTH_WPA2_PSK,
+            .pmf_cfg = {
+                .required = false,
+            },
+        },
+    };
+
+    ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_AP, &wifi_ap_config));
+
+    ESP_LOGI(TAG, "wifi_init_softap finished. SSID:%s password:%s channel:%d",
+             WIFI_AP_SSID, WIFI_AP_PASSWD, WIFI_AP_CHANNEL);
+
+    ESP_ERROR_CHECK(esp_wifi_start());
+
+    http_server_start();
 }
 
 const char* wifi_get_mac(void)
@@ -104,4 +164,32 @@ bool wifi_is_connected(void)
         return true;
     }
     return false;
+}
+
+bool wifi_test_connection(const char* ssid, const char* password)
+{
+    wifi_config_t cfg = { 0 };
+    strncpy((char*) cfg.sta.ssid, ssid, sizeof cfg.sta.ssid);
+    if (password)
+        strncpy((char*) cfg.sta.password, password, sizeof cfg.sta.password);
+    esp_wifi_set_mode(WIFI_MODE_STA);
+    esp_wifi_start();
+    esp_wifi_set_config(WIFI_IF_STA, &cfg);
+    ESP_LOGI(TAG, "Trying to connect to %s", ssid);
+    int64_t start_time = esp_timer_get_time();
+    if (wifi_is_connected()) {
+        esp_wifi_disconnect();
+        while (wifi_is_connected()) {
+            vTaskDelay(pdMS_TO_TICKS(10));
+        }
+    }
+    esp_wifi_connect();
+    while (!wifi_is_connected()) {
+        vTaskDelay(pdMS_TO_TICKS(100));
+        if (esp_timer_get_time() - start_time > 15 * 1000 * 1000) {
+            printf("Connection timeout\n");
+            return false;
+        }
+    }
+    return true;
 }

@@ -456,7 +456,7 @@ static const stop_t stops[] = {
 };
 
 led_segment_t cta_get_leds(size_t stop_id, line_name_t line)
-    {
+{
     const stop_t* stop = &stops[INDEX(stop_id)];
     return (led_segment_t) { .rail = stop->led[line], .station = stations[stop->station_idx].led_index[line] };
 }

@@ -15,8 +15,24 @@
 #include "cta.h"
 #include "display.h"
 #include "ui.h"
+#include "config.h"
 
 static const char* TAG = "main";
+
+typedef enum {
+    LED_MODE_OFF,
+    LED_MODE_LINE_COLORS,
+    LED_MODE_LIVE_TRACKING,
+    LED_MODE_RANDOM_COLORS,
+    LED_MODE_SOLID_COLOR,
+    LED_MODE_MARQUEE,
+    LED_MODE_BREATHING,
+} led_mode_t;
+
+typedef enum {
+    LCD_MODE_OFF,
+    LCD_MODE_ARRIVALS,
+} lcd_mode_t;
 
 typedef struct {
     uint8_t r;
@@ -71,6 +87,7 @@ static void light_stop(led_strip_handle_t led_handle, led_segment_t segment, col
 void app_main(void)
 {
     nvs_flash_init();
+    config_init();
     setenv("TZ", "CST6CDT,M3.2.0/2:00:00,M11.1.0/2:00:00", 1);
     tzset();
 
@@ -102,10 +119,9 @@ void app_main(void)
 
     ui_init(display_lock);
 
-    #define NUM_LEDS 511
     led_strip_config_t led_cfg = {
         .strip_gpio_num = GPIO_NUM_45,
-        .max_leds = NUM_LEDS,
+        .max_leds = CTA_NUM_LEDS,
         .led_model = LED_MODEL_WS2812,
         .color_component_format = LED_STRIP_COLOR_COMPONENT_FMT_GRB,
         .flags = { .invert_out = 0 },
@@ -118,15 +134,25 @@ void app_main(void)
     led_strip_handle_t led_handle = NULL;
     ESP_ERROR_CHECK(led_strip_new_spi_device(&led_cfg, &spi_cfg, &led_handle));
 
-    wifi_init(CONFIG_SSID, CONFIG_PASSWORD);
-    while (!wifi_is_connected()) {
-        vTaskDelay(pdMS_TO_TICKS(100));
+    wifi_init();
+    char* ssid = config_get_string("ssid");
+    char* password = config_get_string("password");
+    if (ssid == NULL) {
+        wifi_init_softap();
+    } else {
+        wifi_connect(ssid, password);
+        while (!wifi_is_connected()) {
+            vTaskDelay(pdMS_TO_TICKS(100));
+        }
+        sync_time();
     }
-    sync_time();
 
-    for (;;) {
+    for (;; vTaskDelay(pdMS_TO_TICKS(10000))) {
         line_t* lines = api_get();
-        for (size_t i = 0; i < NUM_LEDS; ++i) {
+        if (lines == NULL) {
+            continue;
+        }
+        for (size_t i = 0; i < CTA_NUM_LEDS; ++i) {
             led_strip_set_pixel(led_handle, i, 0, 0, 0);
         }
         for (size_t i = 0; i < LINE_COUNT; ++i) {
@@ -140,7 +166,5 @@ void app_main(void)
         }
 
         led_strip_refresh(led_handle);
-
-        vTaskDelay(pdMS_TO_TICKS(10000));
     }
 }

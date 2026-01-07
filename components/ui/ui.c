@@ -32,12 +32,12 @@ void ui_init(lock_fn_t lock_fn)
         rows[i] = lv_obj_create(lv_screen_active());
         lv_obj_set_style_border_width(rows[i], 1, 0);
         lv_obj_set_style_border_color(rows[i], (lv_color_t) { 0, 0, 0 }, 0);
-        lv_obj_set_size(rows[i], LCD_H, 7 * LCD_V / 24);
+        lv_obj_set_size(rows[i], UI_W, 7 * UI_H / 24);
         lv_style_init(&row_styles[i]);
         lv_style_set_bg_color(&row_styles[i], (lv_color_t) { 100, 100, 100 });
         lv_style_set_text_color(&row_styles[i], (lv_color_t) { 255, 255, 255 });
         lv_obj_add_style(rows[i], &row_styles[i], 0);
-        lv_obj_align(rows[i], LV_ALIGN_TOP_LEFT, 0, (LCD_V / 8) + (7 * LCD_V * i / 24));
+        lv_obj_align(rows[i], LV_ALIGN_TOP_LEFT, 0, (UI_H / 8) + (7 * UI_H * i / 24));
         lv_obj_set_style_radius(rows[i], 0, 0);
         lv_obj_set_style_pad_all(rows[i], 0, 0);
 
@@ -47,14 +47,14 @@ void ui_init(lock_fn_t lock_fn)
         lv_label_set_text(lbl, "Not connnected");
         lv_obj_set_style_text_font(lbl, &arimo_24, 0);
         lv_label_set_long_mode(lbl, LV_LABEL_LONG_MODE_SCROLL_CIRCULAR);
-        lv_obj_set_width(lbl, 2 * LCD_H / 3);
+        lv_obj_set_width(lbl, 2 * UI_W / 3);
         lv_obj_align(lbl, LV_ALIGN_TOP_LEFT, 5, 5);
 
         lbl = lv_label_create(rows[i]);
         lv_label_set_text(lbl, "Not connnected");
         lv_obj_set_style_text_font(lbl, &arimo_32, 0);
         lv_label_set_long_mode(lbl, LV_LABEL_LONG_MODE_SCROLL_CIRCULAR);
-        lv_obj_set_width(lbl, 2 * LCD_H / 3);
+        lv_obj_set_width(lbl, 2 * UI_W / 3);
         lv_obj_align(lbl, LV_ALIGN_BOTTOM_LEFT, 5, 0);
 
         lbl = lv_label_create(rows[i]);

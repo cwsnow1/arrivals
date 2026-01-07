@@ -1,11 +1,12 @@
 #include <time.h>
+#include <stdio.h>
 
-#include "esp_http_client.h"
 #include "esp_log.h"
 #include "json_parser.h"
 
 #include "api.h"
-#include "private/http_client.h"
+#include "http_client.h"
+#include "wifi.h"
 
 static const char* TAG = "api";
 
@@ -47,8 +48,8 @@ static void decode(http_response_t r, line_name_t line)
     int err = 0;
     int num_routes = 0;
 
-    if (r.status != HttpStatus_Ok) {
-        ESP_LOGE(TAG, "Bad status: %d\n", r.status);
+    if (r.status != 200) {
+        ESP_LOGE(TAG, "Bad status: %d", r.status);
         goto err;
     }
     if (json_parse_start(&ctx, (const char*) r.buffer, r.length) != OS_SUCCESS) {
@@ -134,6 +135,10 @@ err:
 
 line_t* api_get(void)
 {
+    if (!wifi_is_connected()) {
+        ESP_LOGI(TAG, "WiFi not connected, skipping");
+        return NULL;
+    }
     ESP_LOGD(TAG, "Starting requests");
     http_response_t responses[LINE_COUNT];
     char url[128];

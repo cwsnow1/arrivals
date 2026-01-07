@@ -21,6 +21,7 @@
 #include "esp_lcd_touch_ft6x36.h"
 
 #include "display.h"
+#include "config.h"
 
 #include "lvgl.h"
 
@@ -150,43 +151,17 @@ static void init_backlight(gpio_num_t backlight_pin)
     ESP_ERROR_CHECK(ledc_channel_config(&ledc_channel));
     ESP_ERROR_CHECK(ledc_fade_func_install(0));
     ledc_set_duty_and_update(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0, 0, 0);
-    display_set_brightness(255, 500);
-    esp_register_shutdown_handler(deinit_backlight);
-}
-
-static void lvgl_port_update_callback(lv_display_t *disp)
-{
-    return;
-    esp_lcd_panel_handle_t panel_handle = lv_display_get_user_data(disp);
-    lv_display_rotation_t rotation = lv_display_get_rotation(disp);
-
-    switch (rotation) {
-    case LV_DISPLAY_ROTATION_0:
-        // Rotate LCD display
-        esp_lcd_panel_swap_xy(panel_handle, false);
-        esp_lcd_panel_mirror(panel_handle, true, false);
-        break;
-    case LV_DISPLAY_ROTATION_90:
-        // Rotate LCD display
-        esp_lcd_panel_swap_xy(panel_handle, true);
-        esp_lcd_panel_mirror(panel_handle, true, true);
-        break;
-    case LV_DISPLAY_ROTATION_180:
-        // Rotate LCD display
-        esp_lcd_panel_swap_xy(panel_handle, false);
-        esp_lcd_panel_mirror(panel_handle, false, true);
-        break;
-    case LV_DISPLAY_ROTATION_270:
-        // Rotate LCD display
-        esp_lcd_panel_swap_xy(panel_handle, true);
-        esp_lcd_panel_mirror(panel_handle, false, false);
-        break;
+    int64_t brightness = 0;
+    if (!config_get_int("brightness", &brightness)) {
+        brightness = MAX_BRIGHTNESS;
+        config_set_int("brightness", brightness);
     }
+    display_set_brightness((uint8_t) brightness, 500);
+    esp_register_shutdown_handler(deinit_backlight);
 }
 
 static void lvgl_flush_cb(lv_display_t *disp, const lv_area_t *area, uint8_t *px_map)
 {
-    lvgl_port_update_callback(disp);
     esp_lcd_panel_handle_t panel_handle = lv_display_get_user_data(disp);
     int offsetx1 = area->x1;
     int offsetx2 = area->x2;

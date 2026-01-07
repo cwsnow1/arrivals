@@ -1,4 +1,3 @@
-
 set(COMPONENT_SRCDIRS
     .
 )
@@ -8,9 +7,8 @@ set(COMPONENT_ADD_INCLUDEDIRS
 )
 
 set(COMPONENT_PRIV_REQUIRES
-    esp_timer
-    http_server
-    esp_wifi
+    wifi
+    esp_http_client
 )
 
 set(COMPONENT_REQUIRES

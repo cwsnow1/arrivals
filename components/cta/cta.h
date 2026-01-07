@@ -3,6 +3,8 @@
 #include <stdint.h>
 #include <stddef.h>
 
+#define CTA_NUM_LEDS    (511)
+
 typedef enum {
     RED_LINE,
     BLUE_LINE,
