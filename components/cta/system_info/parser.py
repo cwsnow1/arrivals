@@ -54,7 +54,7 @@ def parse_leds() -> dict[str, list[led]]:
             cta_line = station
             leds[cta_line] = list[led]()
         else:
-            for x in range(count):
+            for _ in range(count):
                 leds[cta_line].append(led())
                 leds[cta_line][-1].type = 'rail'
                 leds[cta_line][-1].index = i
@@ -118,6 +118,9 @@ leds = parse_leds()
 
 station_indices = dict()
 i = 0
+station_led_map = dict[str, dict[str, int]]()
+for line in line_names:
+    station_led_map[line] = dict[str, int]()
 with open(script_dir.joinpath('cta.csv')) as csvfile:
     reader = csv.DictReader(csvfile)
     for row in reader:
@@ -138,6 +141,7 @@ with open(script_dir.joinpath('cta.csv')) as csvfile:
             for l in led_list:
                 if l.type == 'station' and l.station == station_name:
                     led_map[l.line] = l.index
+                    station_led_map[l.line][station_name] = l.index
         print(f'{{ .id = {station_id}, .location = {{ {lat}f, {lon}f }}, .led_index = {{ ', end='')
         for line_index, index in led_map.items():
             print(f'[{line_index}] = {index}', end=', ')
@@ -149,6 +153,9 @@ with open(script_dir.joinpath('cta.csv')) as csvfile:
     for row in reader:
         stop_station_map[row['STOP_NAME']] = row['STATION_DESCRIPTIVE_NAME']
 
+stop_led_map = dict[str, dict[str, list[int]]]()
+for line in line_names:
+    stop_led_map[line] = dict[str, list[int]]()
 with open(script_dir.joinpath('cta.csv')) as csvfile:
     reader = csv.DictReader(csvfile)
     for row in reader:
@@ -184,7 +191,12 @@ with open(script_dir.joinpath('cta.csv')) as csvfile:
                     if led_starts[line] < l.index:
                         led_starts[line] = l.index
                     led_counts[line] -= 1
+            stop_led_map[line][stop_name] = [ led_starts[line], led_counts[line] ]
         print(f'[INDEX({stop_id})] = {{ .line = {line_flag}, .station = {station_idx}, .led = {{ ', end='')
         for line in lines_info:
             print(f'[{line}] = {{ .start = {led_starts[line]}, .count = {led_counts[line]} }}, ', end='')
         print('}},')
+
+for line in line_names:
+    print(f'[{line}] = {{')
+    for stop

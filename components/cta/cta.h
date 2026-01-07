@@ -508,4 +508,5 @@ typedef struct stop {
     led_index_t led[LINE_COUNT];
 } stop_t;
 
+const uint16_t* cta_get_leds_for_line(line_name_t line, size_t* count);
 led_segment_t cta_get_leds(size_t stop_id, line_name_t line);
