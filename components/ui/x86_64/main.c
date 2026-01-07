@@ -110,6 +110,7 @@ int main(void)
 
     ui_set_row(0, "95th/Dan Ryan", 814, "Red", line_colors[0], 1);
     ui_set_row(1, "Harlem", 345, "Green", line_colors[2], 4);
+    ui_set_row(2, "Howard", 914, "Red", line_colors[0], 7);
     ui_set_station("State/Lake");
 
     while (!WindowShouldClose()) {

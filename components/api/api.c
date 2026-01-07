@@ -11,6 +11,7 @@
 static const char* TAG = "api";
 
 #define API_ENDPOINT "http://lapi.transitchicago.com/api/1.0/ttpositions.aspx?rt=%s&outputType=JSON&key=" CONFIG_API_KEY
+#define STATION_ENDPOINT "http://lapi.transitchicago.com/api/1.0/ttarrivals.aspx?mapid=%d&max=3&outputType=JSON&key=" CONFIG_API_KEY
 
 static const char* line_names[] = {
     [RED_LINE] = "red",
@@ -24,6 +25,9 @@ static const char* line_names[] = {
 };
 
 static line_t s_lines[LINE_COUNT];
+
+static expected_train_t trains[3];
+static char station_name_buffer[128];
 
 static int timestamp_subtract(const char* arrival_ts)
 {
@@ -133,6 +137,71 @@ err:
     free(r.buffer);
 }
 
+static expected_trains_t decode_arrivals(http_response_t r)
+{
+    expected_trains_t ret = { .trains = trains, .station_name = station_name_buffer };
+    jparse_ctx_t ctx;
+    int err = 0;
+    int num_trains = 0;
+
+    if (r.status != HttpStatus_Ok) {
+        ESP_LOGE(TAG, "Bad status: %d\n", r.status);
+        goto err;
+    }
+
+    if (json_parse_start(&ctx, (const char*) r.buffer, r.length) != OS_SUCCESS) {
+        ESP_LOGE(TAG, "Error parsing response");
+        goto err;
+    }
+
+    if (json_obj_get_object(&ctx, "ctatt") != OS_SUCCESS) {
+        ESP_LOGE(TAG, "Error finding ctatt obj");
+        goto cleanup;
+    }
+
+    json_obj_get_int(&ctx, "errCd", &err);
+    if (err) {
+        ESP_LOGE(TAG, "Error code received %d", err);
+        goto cleanup;
+    }
+
+    json_obj_get_array(&ctx, "eta", &num_trains);
+    ret.count = num_trains >= 3 ? 3 : num_trains;
+    for (int i = 0; i < ret.count; ++i) {
+        char buffer[128];
+        json_arr_get_object(&ctx, i);
+
+        json_obj_get_string(&ctx, "staNm", station_name_buffer, sizeof station_name_buffer);
+
+        json_obj_get_string(&ctx, "rt", buffer, sizeof buffer);
+        ret.trains[i].line = cta_get_line_from_name(buffer);
+
+        json_obj_get_string(&ctx, "rn", buffer, sizeof buffer);
+        ret.trains[i].rn = strtol(buffer, NULL, 10);
+
+        json_obj_get_string(&ctx, "destNm", ret.trains[i].destination, sizeof ret.trains[i].destination);
+
+        json_obj_get_string(&ctx, "arrT", buffer, sizeof buffer);
+        ret.trains[i].eta = timestamp_subtract(buffer) / 60;
+    
+        json_obj_get_string(&ctx, "isApp", buffer, sizeof buffer);
+        if (!strcmp(buffer, "1")) {
+            ret.trains[i].eta = 0;
+        }
+        json_obj_get_string(&ctx, "isDly", buffer, sizeof buffer);
+        if (!strcmp(buffer, "1")) {
+            ret.trains[i].eta = -1;
+        }
+        json_arr_leave_object(&ctx);
+    }
+
+cleanup:
+    json_parse_end(&ctx);
+err:
+    free(r.buffer);
+    return ret;
+}
+
 line_t* api_get(void)
 {
     if (!wifi_is_connected()) {
@@ -152,4 +221,12 @@ line_t* api_get(void)
         decode(responses[i], i);
     }
     return s_lines;
+}
+
+expected_trains_t api_get_expected(station_id_t station)
+{
+    char url[128];
+    sprintf(url, STATION_ENDPOINT, station);
+    http_response_t resp = http_get(url);
+    return decode_arrivals(resp);
 }

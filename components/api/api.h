@@ -17,7 +17,21 @@ typedef struct {
     size_t count;
 } line_t;
 
+typedef struct {
+    char destination[128];
+    line_name_t line;
+    int rn;
+    int eta;
+} expected_train_t;
+
+typedef struct {
+    expected_train_t* trains;
+    const char* station_name;
+    size_t count;
+} expected_trains_t;
+
 line_t* api_get(void);
+expected_trains_t api_get_expected(station_id_t station);
 
 #ifdef __cplusplus
 }

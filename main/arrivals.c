@@ -40,7 +40,7 @@ typedef struct {
     uint8_t b;
 } color_t;
 
-static const color_t line_colors[LINE_COUNT] = {
+static const color_t line_colors_led[LINE_COUNT] = {
     [RED_LINE]    = { .r = 3, .g = 0, .b = 0 },
     [BLUE_LINE]   = { .r = 0, .g = 2, .b = 4 },
     [GREEN_LINE]  = { .r = 1, .g = 3, .b = 0 },
@@ -50,6 +50,18 @@ static const color_t line_colors[LINE_COUNT] = {
     [PINK_LINE]   = { .r = 3, .g = 1, .b = 1 },
     [ORANGE_LINE] = { .r = 3, .g = 1, .b = 0 },
 };
+
+static const lv_color_t line_colors_rgb[] = {
+    [RED_LINE]    = { .red = 227, .green =  55, .blue =  25 },
+    [BLUE_LINE]   = { .red =   0, .green = 157, .blue = 220 },
+    [GREEN_LINE]  = { .red =   0, .green = 169, .blue =  79 },
+    [BROWN_LINE]  = { .red = 118, .green =  66, .blue =   0 },
+    [PURPLE_LINE] = { .red =  73, .green =  47, .blue = 146 },
+    [YELLOW_LINE] = { .red = 255, .green = 232, .blue =   0 },
+    [PINK_LINE]   = { .red = 243, .green = 139, .blue = 185 },
+    [ORANGE_LINE] = { .red = 244, .green = 120, .blue =  54 },
+};
+
 
 static void sync_time(void)
 {
@@ -119,6 +131,11 @@ void app_main(void)
 
     ui_init(display_lock);
 
+    ui_set_station("State/Lake");
+    ui_set_row(0, "95th/Dan Ryan", 814, "Red", line_colors_rgb[RED_LINE], 0);
+    ui_set_row(1, "Harlem/Lake", 345, "Green", line_colors_rgb[GREEN_LINE], 2);
+    ui_set_row(2, "Howard", 914, "Red", line_colors_rgb[RED_LINE], -1);
+
     led_strip_config_t led_cfg = {
         .strip_gpio_num = GPIO_NUM_45,
         .max_leds = CTA_NUM_LEDS,
@@ -159,12 +176,29 @@ void app_main(void)
             for (size_t j = 0; j < lines[i].count; ++j) {
                 led_segment_t segment = cta_get_leds(lines[i].trains[j].next_stop, i);
                 if (segment.station == 0) {
-                    ESP_LOGW(TAG, "Station LED index is 0, Line: %zu, stop_id=%d\n", i, lines[i].trains[j].next_stop);
+                    continue;
                 }
-                light_stop(led_handle, segment, line_colors[i], lines[i].trains[j].progress);
+                light_stop(led_handle, segment, line_colors_led[i], lines[i].trains[j].progress);
             }
         }
 
         led_strip_refresh(led_handle);
+
+        expected_trains_t trains = api_get_expected(CLARK_LAKE_BLUE_BROWN_GREEN_ORANGE_PURPLE_PINK);
+        for (size_t i = 0; i < UI_NUM_ROWS; ++i) {
+            if (i < trains.count) {
+                ui_set_row(i,
+                           trains.trains[i].destination,
+                           trains.trains[i].rn,
+                           cta_get_line_name(trains.trains[i].line),
+                           line_colors_rgb[trains.trains[i].line],
+                           trains.trains[i].eta);
+            } else {
+                ui_set_row(i, "", 0, "", (lv_color_t) { 33, 33, 33 }, 0);
+            }
+        }
+        ui_set_station(trains.station_name);
+
+        vTaskDelay(pdMS_TO_TICKS(10000));
     }
 }

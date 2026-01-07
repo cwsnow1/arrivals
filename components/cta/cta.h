@@ -510,3 +510,5 @@ typedef struct stop {
 
 const uint16_t* cta_get_leds_for_line(line_name_t line, size_t* count);
 led_segment_t cta_get_leds(size_t stop_id, line_name_t line);
+const char* cta_get_line_name(line_name_t line);
+line_name_t cta_get_line_from_name(const char* line_name);

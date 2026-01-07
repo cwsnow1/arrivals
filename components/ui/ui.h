@@ -7,8 +7,8 @@
 extern "C" {
 #endif
 
-#define UI_W    (320)
-#define UI_H    (240)
+#define UI_W        (320)
+#define UI_H        (240)
 #define UI_NUM_ROWS (3)
 
 typedef void(*lock_fn_t)(bool);

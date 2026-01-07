@@ -20,6 +20,7 @@ FetchContent_MakeAvailable(raylib lvgl)
 add_executable(${PROJECT_NAME}
     main.c
     ../ui.c
+    ../fonts/arimo_18.c
     ../fonts/arimo_24.c
     ../fonts/arimo_32.c
     ../callbacks/x86_64/ui_callbacks.c

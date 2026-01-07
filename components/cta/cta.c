@@ -1,3 +1,5 @@
+#include <string.h>
+
 #include "cta.h"
 
 #define ID_OFFSET (30000)
@@ -459,4 +461,37 @@ led_segment_t cta_get_leds(size_t stop_id, line_name_t line)
 {
     const stop_t* stop = &stops[INDEX(stop_id)];
     return (led_segment_t) { .rail = stop->led[line], .station = stations[stop->station_idx].led_index[line] };
+}
+
+const char* cta_get_line_name(line_name_t line) {
+    static const char* line_names[] = {
+        [RED_LINE] = "Red",
+        [BLUE_LINE] = "Blue",
+        [BROWN_LINE] = "Brown",
+        [GREEN_LINE] = "Green",
+        [PURPLE_LINE] = "Purple",
+        [YELLOW_LINE] = "Yellow",
+        [PINK_LINE] = "Pink",
+        [ORANGE_LINE] = "Orange",
+    };
+    return line_names[line];
+}
+
+line_name_t cta_get_line_from_name(const char* line_name) {
+    static const char* line_names[] = {
+        [RED_LINE] = "Red",
+        [BLUE_LINE] = "Blue",
+        [BROWN_LINE] = "Brn",
+        [GREEN_LINE] = "G",
+        [PURPLE_LINE] = "P",
+        [YELLOW_LINE] = "Y",
+        [PINK_LINE] = "Pink",
+        [ORANGE_LINE] = "Org",
+    };
+    for (line_name_t l = RED_LINE; l < LINE_COUNT; ++l) {
+        if (!strcmp(line_name, line_names[l])) {
+            return l;
+        }
+    }
+    return LINE_COUNT;
 }
