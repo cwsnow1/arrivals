@@ -147,7 +147,7 @@ with open(script_dir.joinpath('cta.csv')) as csvfile:
             print(f'[{line_index}] = {index}', end=', ')
         print('}},')
 
-stop_station_map = dict()
+stop_station_map = dict[str, dict]()
 with open(script_dir.joinpath('cta.csv')) as csvfile:
     reader = csv.DictReader(csvfile)
     for row in reader:
@@ -199,4 +199,33 @@ with open(script_dir.joinpath('cta.csv')) as csvfile:
 
 for line in line_names:
     print(f'[{line}] = {{')
-    for stop
+    count = 0
+    for stop in lines[line].stations:
+        positive = stop_led_map[line][stop][1] > 0
+        for i in range(abs(stop_led_map[line][stop][1])):
+            if positive:
+                index = stop_led_map[line][stop][0] + i
+            else:
+                index = stop_led_map[line][stop][0] - i
+            count += 1
+            if count % 16 == 0:
+                end = '\n    '
+            else:
+                end = ''
+            print(f'{index}, ', end=end)
+        try:
+            count += 1
+            if count % 16 == 0:
+                end = '\n    '
+            else:
+                end = ''
+            print(f'{station_led_map[line][stop_station_map[stop]]}, ', end=end)
+        except:
+            count += 1
+            if count % 16 == 0:
+                end = '\n    '
+            else:
+                end = ''
+            print(f'/* FIX ({stop}) */', end=end)
+    print('},')
+

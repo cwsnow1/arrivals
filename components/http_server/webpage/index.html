@@ -141,8 +141,8 @@
             </div>
 
             <div class="form-group">
-                <label for="lcd_brightness">LCD Brightness: <span id="brightness_value">50</span>%</label>
-                <input type="range" id="lcd_brightness" name="lcd_brightness" min="0" max="100" value="50"
+                <label for="brightness">LCD Brightness: <span id="brightness_value">50</span>%</label>
+                <input type="range" id="brightness" name="brightness" min="0" max="100" value="50"
                     oninput="document.getElementById('brightness_value').textContent = this.value">
             </div>
 
@@ -156,14 +156,14 @@
     <script>
         let currentSsid = '';
 
-        function scanNetworks() {
-            fetch('/scan', { method: 'POST' })
+        async function scanNetworks() {
+            fetch('/scan-wifi', { method: 'POST' })
                 .then(response => response.json())
                 .then(networks => {
                     const select = document.getElementById('ssid_select');
                     select.innerHTML = '';
 
-                    networks.forEach(network => {
+                    networks.networks.forEach(network => {
                         const option = document.createElement('option');
                         option.value = network;
                         option.textContent = network;
@@ -225,9 +225,9 @@
                     if (config.lcd_mode !== undefined) {
                         document.getElementById('lcd_mode').value = config.lcd_mode;
                     }
-                    if (config.lcd_brightness !== undefined) {
-                        const brightness = Math.round((parseInt(config.lcd_brightness) / 255) * 100);
-                        document.getElementById('lcd_brightness').value = brightness;
+                    if (config.brightness !== undefined) {
+                        const brightness = Math.round((parseInt(config.brightness) / 255) * 100);
+                        document.getElementById('brightness').value = brightness;
                         document.getElementById('brightness_value').textContent = brightness;
                     }
                     scanNetworks();
@@ -245,7 +245,7 @@
             const formData = new FormData(form);
             const config = {};
             formData.forEach((value, key) => {
-                if (key === 'lcd_brightness') {
+                if (key === 'brightness') {
                     config[key] = Math.round((parseInt(value) / 100) * 255);
                 } else if (key == 'password' || key == 'ssid') {
                     if (value != '') {

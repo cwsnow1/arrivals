@@ -144,7 +144,7 @@ static expected_trains_t decode_arrivals(http_response_t r)
     int err = 0;
     int num_trains = 0;
 
-    if (r.status != HttpStatus_Ok) {
+    if (r.status != 200) {
         ESP_LOGE(TAG, "Bad status: %d\n", r.status);
         goto err;
     }

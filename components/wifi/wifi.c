@@ -169,9 +169,9 @@ bool wifi_is_connected(void)
 bool wifi_test_connection(const char* ssid, const char* password)
 {
     wifi_config_t cfg = { 0 };
-    strncpy((char*) cfg.sta.ssid, ssid, sizeof cfg.sta.ssid);
+    memcpy(cfg.sta.ssid, ssid, sizeof cfg.sta.ssid);
     if (password)
-        strncpy((char*) cfg.sta.password, password, sizeof cfg.sta.password);
+        memcpy((char*) cfg.sta.password, password, sizeof cfg.sta.password);
     esp_wifi_set_mode(WIFI_MODE_STA);
     esp_wifi_start();
     esp_wifi_set_config(WIFI_IF_STA, &cfg);

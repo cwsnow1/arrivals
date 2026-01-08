@@ -82,7 +82,7 @@ static esp_err_t config_post_handler(httpd_req_t* req)
         httpd_resp_send_500(req);
         return ESP_ERR_NO_MEM;
     }
-    ESP_RETURN_ON_ERROR(httpd_req_recv(req, message_buffer, req->content_len), TAG, "Error receiving data");
+    httpd_req_recv(req, message_buffer, req->content_len);
     message_buffer[req->content_len] = '\0';
 
     jparse_ctx_t ctx;
@@ -117,6 +117,44 @@ static esp_err_t config_post_handler(httpd_req_t* req)
     json_parse_end(&ctx);
     httpd_resp_send(req, NULL, 0);
 
+    return ESP_OK;
+}
+
+#define APPEND_STRING(fmt, ...)                                     \
+    do                                                              \
+    {                                                               \
+        size_t chars_needed = snprintf(json_buffer + chars_written, \
+                                       buffer_size - chars_written, \
+                                       fmt,                         \
+                                       __VA_ARGS__);                \
+        if (buffer_size - chars_written <= chars_needed)            \
+        {                                                           \
+            buffer_size *= 2;                                       \
+            json_buffer = realloc(json_buffer, buffer_size);        \
+        }                                                           \
+        else                                                        \
+        {                                                           \
+            chars_written += chars_needed;                          \
+            break;                                                  \
+        }                                                           \
+    } while (true)
+
+static esp_err_t config_get_handler(httpd_req_t* req)
+{
+    size_t param_count;
+    const config_param_t* params = config_get_params(&param_count);
+    size_t buffer_size = 8;
+    char* json_buffer = malloc(buffer_size);
+    if (json_buffer == NULL) {
+        httpd_resp_send_500(req);
+        return ESP_ERR_NO_MEM;
+    }
+    size_t chars_written = 0;
+    for (size_t i = 0; i < param_count; ++i) {
+        APPEND_STRING("abc12%s", "hello");
+    }
+    printf("%s\n", json_buffer);
+    httpd_resp_send_500(req);
     return ESP_OK;
 }
 
@@ -203,6 +241,13 @@ static const httpd_uri_t config_endpoint = {
     .user_ctx  = NULL,
 };
 
+static const httpd_uri_t config_get_endpoint = {
+    .uri       = "/config",
+    .method    = HTTP_GET,
+    .handler   = config_get_handler,
+    .user_ctx  = NULL,
+};
+
 // HTTP Error (404) Handler - Redirects all requests to the root page
 esp_err_t http_404_error_handler(httpd_req_t *req, httpd_err_code_t err)
 {
@@ -233,6 +278,7 @@ void http_server_start(void)
         httpd_register_uri_handler(server, &scan);
         httpd_register_uri_handler(server, &connect);
         httpd_register_uri_handler(server, &config_endpoint);
+        httpd_register_uri_handler(server, &config_get_endpoint);
         httpd_register_err_handler(server, HTTPD_404_NOT_FOUND, http_404_error_handler);
         return;
     }

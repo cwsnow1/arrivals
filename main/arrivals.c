@@ -96,6 +96,28 @@ static void light_stop(led_strip_handle_t led_handle, led_segment_t segment, col
     }
 }
 
+static void marquee(led_strip_handle_t led_handle)
+{
+    const uint16_t* indices[LINE_COUNT];
+    size_t counts[LINE_COUNT];
+    uint16_t prev[LINE_COUNT];
+    for (size_t i = 0; i < LINE_COUNT; ++i) {
+        indices[i] = cta_get_leds_for_line(i, &counts[i]);
+        prev[i] = UINT16_MAX;
+    }
+    for (size_t i = 0;; ++i) {
+        for (line_name_t line = RED_LINE; line < LINE_COUNT; ++line) {
+            size_t index = i % counts[line];
+            if (prev[line] != UINT16_MAX)
+                led_strip_set_pixel(led_handle, prev[line], 0, 0, 0);
+            led_strip_set_pixel(led_handle, indices[line][index], 64, 64, 64);
+            prev[line] = indices[line][index];
+        }
+        led_strip_refresh(led_handle);
+        vTaskDelay(pdMS_TO_TICKS(2));
+    }
+}
+
 void app_main(void)
 {
     nvs_flash_init();
@@ -151,11 +173,14 @@ void app_main(void)
     led_strip_handle_t led_handle = NULL;
     ESP_ERROR_CHECK(led_strip_new_spi_device(&led_cfg, &spi_cfg, &led_handle));
 
+    led_strip_clear(led_handle);
+
     wifi_init();
     char* ssid = config_get_string("ssid");
     char* password = config_get_string("password");
     if (ssid == NULL) {
         wifi_init_softap();
+        marquee(led_handle);
     } else {
         wifi_connect(ssid, password);
         while (!wifi_is_connected()) {
