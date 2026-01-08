@@ -21,6 +21,7 @@ static const config_param_t s_params[] = {
     { .key = "led_mode",   .type = CONFIG_TYPE_INT },
     { .key = "lcd_mode",   .type = CONFIG_TYPE_INT },
     { .key = "brightness", .type = CONFIG_TYPE_INT, .update_cb = update_brightness },
+    { .key = "ap",         .type = CONFIG_TYPE_INT },
 };
 
 static int get_param_index(const char* key)

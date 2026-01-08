@@ -1,12 +1,12 @@
 #include "ui_callbacks.h"
+#include "wifi.h"
 
 void ui_get_ap_info(const char** ssid, const char** password)
 {
-    *ssid = "TestAP";
-    *password = "abc123";
+    wifi_get_ap_info(ssid, password);
 }
 
 const char* ui_get_ap_ip_address(void)
 {
-    return "http://192.168.1.4";
+    return wifi_get_ap_ip_address();
 }

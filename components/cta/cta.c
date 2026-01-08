@@ -608,3 +608,35 @@ const uint16_t* cta_get_leds_for_line(line_name_t line, size_t* count)
         return NULL;
     }
 }
+
+static const color_t line_colors_led[LINE_COUNT] = {
+    [RED_LINE]    = { .r = 3, .g = 0, .b = 0 },
+    [BLUE_LINE]   = { .r = 0, .g = 2, .b = 4 },
+    [GREEN_LINE]  = { .r = 1, .g = 3, .b = 0 },
+    [BROWN_LINE]  = { .r = 2, .g = 1, .b = 0 },
+    [PURPLE_LINE] = { .r = 1, .g = 1, .b = 4 },
+    [YELLOW_LINE] = { .r = 3, .g = 3, .b = 0 },
+    [PINK_LINE]   = { .r = 3, .g = 1, .b = 1 },
+    [ORANGE_LINE] = { .r = 3, .g = 1, .b = 0 },
+};
+
+static const color_t line_colors_rgb[] = {
+    [RED_LINE]    = { .r = 227, .g =  55, .b =  25 },
+    [BLUE_LINE]   = { .r =   0, .g = 157, .b = 220 },
+    [GREEN_LINE]  = { .r =   0, .g = 169, .b =  79 },
+    [BROWN_LINE]  = { .r = 118, .g =  66, .b =   0 },
+    [PURPLE_LINE] = { .r =  73, .g =  47, .b = 146 },
+    [YELLOW_LINE] = { .r = 255, .g = 232, .b =   0 },
+    [PINK_LINE]   = { .r = 243, .g = 139, .b = 185 },
+    [ORANGE_LINE] = { .r = 244, .g = 120, .b =  54 },
+};
+
+color_t cta_get_led_color(line_name_t line)
+{
+    return line_colors_led[line];
+}
+
+color_t cta_get_lcd_color(line_name_t line)
+{
+    return line_colors_rgb[line];
+}

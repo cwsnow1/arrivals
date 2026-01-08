@@ -193,3 +193,20 @@ bool wifi_test_connection(const char* ssid, const char* password)
     }
     return true;
 }
+
+void wifi_get_ap_info(const char** ssid, const char** password)
+{
+    static const char* s_ssid = WIFI_AP_SSID;
+    static const char* s_password = WIFI_AP_PASSWD;
+    *ssid = s_ssid;
+    *password = s_password;
+}
+
+const char* wifi_get_ap_ip_address(void)
+{
+    static char ip_buffer[32];
+    esp_netif_ip_info_t ip_info;
+    esp_netif_get_ip_info(s_apif, &ip_info);
+    sprintf(ip_buffer, "http://" IPSTR "", IP2STR(&ip_info.ip));
+    return ip_buffer;
+}

@@ -9,6 +9,10 @@ set(COMPONENT_ADD_INCLUDEDIRS
     .
 )
 
+set(COMPONENT_PRIV_INCLUDEDIRS
+    callbacks
+)
+
 set(COMPONENT_REQUIRES
     lvgl
 )

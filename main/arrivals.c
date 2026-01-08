@@ -4,6 +4,7 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 
+#include "driver/gpio.h"
 #include "esp_heap_caps.h"
 #include "esp_log.h"
 #include "esp_netif_sntp.h"
@@ -33,34 +34,6 @@ typedef enum {
     LCD_MODE_OFF,
     LCD_MODE_ARRIVALS,
 } lcd_mode_t;
-
-typedef struct {
-    uint8_t r;
-    uint8_t g;
-    uint8_t b;
-} color_t;
-
-static const color_t line_colors_led[LINE_COUNT] = {
-    [RED_LINE]    = { .r = 3, .g = 0, .b = 0 },
-    [BLUE_LINE]   = { .r = 0, .g = 2, .b = 4 },
-    [GREEN_LINE]  = { .r = 1, .g = 3, .b = 0 },
-    [BROWN_LINE]  = { .r = 2, .g = 1, .b = 0 },
-    [PURPLE_LINE] = { .r = 1, .g = 1, .b = 4 },
-    [YELLOW_LINE] = { .r = 3, .g = 3, .b = 0 },
-    [PINK_LINE]   = { .r = 3, .g = 1, .b = 1 },
-    [ORANGE_LINE] = { .r = 3, .g = 1, .b = 0 },
-};
-
-static const lv_color_t line_colors_rgb[] = {
-    [RED_LINE]    = { .red = 227, .green =  55, .blue =  25 },
-    [BLUE_LINE]   = { .red =   0, .green = 157, .blue = 220 },
-    [GREEN_LINE]  = { .red =   0, .green = 169, .blue =  79 },
-    [BROWN_LINE]  = { .red = 118, .green =  66, .blue =   0 },
-    [PURPLE_LINE] = { .red =  73, .green =  47, .blue = 146 },
-    [YELLOW_LINE] = { .red = 255, .green = 232, .blue =   0 },
-    [PINK_LINE]   = { .red = 243, .green = 139, .blue = 185 },
-    [ORANGE_LINE] = { .red = 244, .green = 120, .blue =  54 },
-};
 
 
 static void sync_time(void)
@@ -96,8 +69,10 @@ static void light_stop(led_strip_handle_t led_handle, led_segment_t segment, col
     }
 }
 
-static void marquee(led_strip_handle_t led_handle)
+static void marquee(void* user_data)
 {
+    ESP_LOGI(TAG, "Marquee task entered");
+    led_strip_handle_t led_handle = (led_strip_handle_t) user_data;
     const uint16_t* indices[LINE_COUNT];
     size_t counts[LINE_COUNT];
     uint16_t prev[LINE_COUNT];
@@ -118,12 +93,129 @@ static void marquee(led_strip_handle_t led_handle)
     }
 }
 
+static void line_colors(void* user_data)
+{
+    ESP_LOGI(TAG, "Line colors task entered");
+    led_strip_handle_t led_handle = (led_strip_handle_t) user_data;
+    const uint16_t* indices[LINE_COUNT];
+    size_t counts[LINE_COUNT];
+    for (line_name_t line = 0; line < LINE_COUNT; ++line) {
+        indices[line] = cta_get_leds_for_line(line, &counts[line]);
+        for (size_t j = 0; j < counts[line]; ++j) {
+            color_t c = cta_get_led_color(line);
+            led_strip_set_pixel(led_handle, indices[line][j], c.r, c.g, c.b);
+        }
+    }
+    // Refreshing every 10 seconds because sometimes single-time writes don't work
+    for (;; vTaskDelay(pdMS_TO_TICKS(10000))) {
+        led_strip_refresh(led_handle);
+    }
+}
+
+static void solid_color(void* user_data)
+{
+    ESP_LOGI(TAG, "Solid color task entered");
+    led_strip_handle_t led_handle = (led_strip_handle_t) user_data;
+    int64_t color_int;
+    color_t color;
+    if (!config_get_int("led_color", &color_int)) {
+        ESP_LOGE(TAG, "Color not found! Defaulting to white");
+        color.r = 1;
+        color.g = 1;
+        color.b = 1;
+    } else {
+        memcpy(&color, &color_int, sizeof color);
+    }
+    for (size_t i = 0; i < CTA_NUM_LEDS; ++i) {
+        led_strip_set_pixel(led_handle, i, color.r, color.g, color.b);
+    }
+    // Refreshing every 10 seconds because sometimes single-time writes don't work
+    for (;; vTaskDelay(pdMS_TO_TICKS(10000))) {
+        led_strip_refresh(led_handle);
+    }
+}
+
+static void live_tracking(void* user_data)
+{
+    ESP_LOGI(TAG, "Live tracking task entered");
+    led_strip_handle_t led_handle = (led_strip_handle_t) user_data;
+    for (;; vTaskDelay(pdMS_TO_TICKS(10000))) {
+        line_t* lines = api_get();
+        if (lines == NULL) {
+            continue;
+        }
+        for (size_t i = 0; i < CTA_NUM_LEDS; ++i) {
+            led_strip_set_pixel(led_handle, i, 0, 0, 0);
+        }
+        for (size_t i = 0; i < LINE_COUNT; ++i) {
+            for (size_t j = 0; j < lines[i].count; ++j) {
+                led_segment_t segment = cta_get_leds(lines[i].trains[j].next_stop, i);
+                if (segment.station == 0) {
+                    continue;
+                }
+                light_stop(led_handle, segment, cta_get_led_color(i), lines[i].trains[j].progress);
+            }
+        }
+
+        led_strip_refresh(led_handle);
+    }
+}
+
+static void arrivals_lcd(void* user_data)
+{
+    ui_arrivals();
+    for (;; vTaskDelay(pdMS_TO_TICKS(150000))) {
+        expected_trains_t trains = api_get_expected(CLARK_LAKE_BLUE_BROWN_GREEN_ORANGE_PURPLE_PINK);
+        for (size_t i = 0; i < UI_NUM_ROWS; ++i) {
+            if (i < trains.count) {
+                lv_color_t lv_color;
+                color_t color = cta_get_lcd_color(trains.trains[i].line);
+                memcpy(&lv_color, &color, sizeof color);
+                ui_set_row(i,
+                            trains.trains[i].destination,
+                            trains.trains[i].rn,
+                            cta_get_line_name(trains.trains[i].line),
+                            lv_color,
+                            trains.trains[i].eta);
+            } else {
+                ui_clear_row(i);
+            }
+        }
+        ui_set_station(trains.station_name);
+    }
+}
+
+static void reset_button_cb(void* ctx)
+{
+    config_set_int("ap", 1);
+    esp_restart();
+}
+
 void app_main(void)
 {
     nvs_flash_init();
     config_init();
     setenv("TZ", "CST6CDT,M3.2.0/2:00:00,M11.1.0/2:00:00", 1);
     tzset();
+
+    int64_t ap;
+    if (!config_get_int("ap", &ap)) {
+        config_set_int("ap", 1);
+    }
+    config_get_int("ap", &ap);
+    if (ap) {
+        config_set_int("ap", 0);
+    }
+
+    gpio_config_t reset_button_cfg = {
+        .pin_bit_mask = BIT64(GPIO_NUM_0),
+        .mode         = GPIO_MODE_INPUT,
+        .intr_type    = GPIO_INTR_NEGEDGE,
+        .pull_up_en   = GPIO_PULLUP_ENABLE,
+    };
+    gpio_config(&reset_button_cfg);
+    gpio_install_isr_service(0);
+    gpio_isr_handler_add(GPIO_NUM_0, reset_button_cb, NULL);
 
     i2c_master_bus_config_t i2c_cfg = {
         .i2c_port          = I2C_NUM_1,
@@ -153,10 +245,17 @@ void app_main(void)
 
     ui_init(display_lock);
 
-    ui_set_station("State/Lake");
-    ui_set_row(0, "95th/Dan Ryan", 814, "Red", line_colors_rgb[RED_LINE], 0);
-    ui_set_row(1, "Harlem/Lake", 345, "Green", line_colors_rgb[GREEN_LINE], 2);
-    ui_set_row(2, "Howard", 914, "Red", line_colors_rgb[RED_LINE], -1);
+    if (ap) {
+        ui_ip();
+    } else {
+        int64_t lcd_mode;
+        config_get_int("lcd_mode", &lcd_mode);
+        if (lcd_mode == LCD_MODE_ARRIVALS) {
+            xTaskCreate(arrivals_lcd, "lcd_task", 8192, NULL, 4, NULL);
+        } else if (lcd_mode == LCD_MODE_OFF) {
+            display_set_brightness(0, 0);
+        }
+    }
 
     led_strip_config_t led_cfg = {
         .strip_gpio_num = GPIO_NUM_45,
@@ -178,9 +277,8 @@ void app_main(void)
     wifi_init();
     char* ssid = config_get_string("ssid");
     char* password = config_get_string("password");
-    if (ssid == NULL) {
+    if (ssid == NULL || ap) {
         wifi_init_softap();
-        marquee(led_handle);
     } else {
         wifi_connect(ssid, password);
         while (!wifi_is_connected()) {
@@ -189,41 +287,29 @@ void app_main(void)
         sync_time();
     }
 
-    for (;; vTaskDelay(pdMS_TO_TICKS(10000))) {
-        line_t* lines = api_get();
-        if (lines == NULL) {
-            continue;
-        }
-        for (size_t i = 0; i < CTA_NUM_LEDS; ++i) {
-            led_strip_set_pixel(led_handle, i, 0, 0, 0);
-        }
-        for (size_t i = 0; i < LINE_COUNT; ++i) {
-            for (size_t j = 0; j < lines[i].count; ++j) {
-                led_segment_t segment = cta_get_leds(lines[i].trains[j].next_stop, i);
-                if (segment.station == 0) {
-                    continue;
-                }
-                light_stop(led_handle, segment, line_colors_led[i], lines[i].trains[j].progress);
-            }
-        }
-
-        led_strip_refresh(led_handle);
-
-        expected_trains_t trains = api_get_expected(CLARK_LAKE_BLUE_BROWN_GREEN_ORANGE_PURPLE_PINK);
-        for (size_t i = 0; i < UI_NUM_ROWS; ++i) {
-            if (i < trains.count) {
-                ui_set_row(i,
-                           trains.trains[i].destination,
-                           trains.trains[i].rn,
-                           cta_get_line_name(trains.trains[i].line),
-                           line_colors_rgb[trains.trains[i].line],
-                           trains.trains[i].eta);
-            } else {
-                ui_set_row(i, "", 0, "", (lv_color_t) { 33, 33, 33 }, 0);
-            }
-        }
-        ui_set_station(trains.station_name);
-
-        vTaskDelay(pdMS_TO_TICKS(10000));
+    int64_t led_mode;
+    config_get_int("led_mode", &led_mode);
+    TaskFunction_t task = NULL;
+    switch (led_mode) {
+    case LED_MODE_OFF:
+        break;
+    case LED_MODE_LINE_COLORS:
+        task = line_colors;
+        break;
+    case LED_MODE_LIVE_TRACKING:
+        task = live_tracking;
+        break;
+    case LED_MODE_RANDOM_COLORS:
+        break;
+    case LED_MODE_SOLID_COLOR:
+        task = solid_color;
+        break;
+    case LED_MODE_MARQUEE:
+        task = marquee;
+        break;
+    case LED_MODE_BREATHING:
+        break;
     }
+    if (task)
+        xTaskCreate(task, "led_task", 8192, led_handle, 4, NULL);
 }

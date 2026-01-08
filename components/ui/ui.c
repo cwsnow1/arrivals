@@ -1,6 +1,7 @@
 #include "lvgl.h"
 
 #include "ui.h"
+#include "callbacks/ui_callbacks.h"
 
 static lock_fn_t s_lock;
 
@@ -15,6 +16,46 @@ static lv_obj_t* station_label;
 void ui_init(lock_fn_t lock_fn)
 {
     s_lock = lock_fn;
+}
+
+void ui_ip(void)
+{
+    s_lock(true);
+
+    const char* ssid, *password;
+    ui_get_ap_info(&ssid, &password);
+    const char* ip_address = ui_get_ap_ip_address();
+
+    lv_obj_set_style_bg_color(lv_screen_active(), (lv_color_t) { 33, 33, 33 }, 0);
+    lv_obj_set_style_text_color(lv_screen_active(), (lv_color_t) { 255, 255, 255 }, 0);
+
+    lv_obj_t* lbl;
+
+    lbl = lv_label_create(lv_screen_active());
+    lv_label_set_text(lbl, "To configure:");
+    lv_obj_align(lbl, LV_ALIGN_TOP_MID, 0, 10);
+    lv_obj_set_style_text_font(lbl, &arimo_32, 0);
+
+    lbl = lv_label_create(lv_screen_active());
+    lv_label_set_text_fmt(lbl, "SSID: %s", ssid);
+    lv_obj_align(lbl, LV_ALIGN_TOP_MID, 0, 50);
+    lv_obj_set_style_text_font(lbl, &arimo_32, 0);
+
+    lbl = lv_label_create(lv_screen_active());
+    lv_label_set_text_fmt(lbl, "Pass: %s", password);
+    lv_obj_align(lbl, LV_ALIGN_TOP_MID, 0, 90);
+    lv_obj_set_style_text_font(lbl, &arimo_32, 0);
+
+    lbl = lv_label_create(lv_screen_active());
+    lv_label_set_text_fmt(lbl, "%s", ip_address);
+    lv_obj_align(lbl, LV_ALIGN_TOP_MID, 0, 130);
+    lv_obj_set_style_text_font(lbl, &arimo_32, 0);
+
+    s_lock(false);
+}
+
+void ui_arrivals(void)
+{
     s_lock(true);
 
     lv_obj_set_style_bg_color(lv_screen_active(), (lv_color_t) { 33, 33, 33 }, 0);
@@ -99,6 +140,23 @@ void ui_set_row(int row_idx,
         lv_label_set_text_static(lbl, "Due");
     } else {
         lv_label_set_text_static(lbl, "Delayed");
+    }
+
+    s_lock(false);
+}
+
+void ui_clear_row(int row_idx)
+{
+    lv_obj_t* lbl;
+
+    s_lock(true);
+
+    lv_style_set_bg_color(&row_styles[row_idx], (lv_color_t) { 33, 33, 33 });
+    lv_obj_invalidate(rows[row_idx]);
+
+    for (size_t i = 0; i < 3; ++i) {
+        lbl = lv_obj_get_child_by_type(rows[row_idx], i, &lv_label_class);
+        lv_label_set_text_static(lbl, "");
     }
 
     s_lock(false);

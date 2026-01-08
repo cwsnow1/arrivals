@@ -106,11 +106,13 @@ static esp_err_t config_post_handler(httpd_req_t* req)
             }
         } else {
             int64_t val = 0;
-            if (json_obj_get_int64(&ctx, params[i].key, &val) == OS_SUCCESS) {
-                config_set_int(params[i].key, val);
-                if (params[i].update_cb) {
-                    params[i].update_cb((void*) (uint32_t) val);
-                }
+            if (json_obj_get_int64(&ctx, params[i].key, &val) != OS_SUCCESS) {
+                json_obj_get_string(&ctx, params[i].key, buffer, sizeof buffer);
+                val = strtoll(buffer, NULL, 10);
+            }
+            config_set_int(params[i].key, val);
+            if (params[i].update_cb) {
+                params[i].update_cb((void*) (uint32_t) val);
             }
         }
     }
@@ -120,41 +122,75 @@ static esp_err_t config_post_handler(httpd_req_t* req)
     return ESP_OK;
 }
 
-#define APPEND_STRING(fmt, ...)                                     \
-    do                                                              \
-    {                                                               \
-        size_t chars_needed = snprintf(json_buffer + chars_written, \
-                                       buffer_size - chars_written, \
-                                       fmt,                         \
-                                       __VA_ARGS__);                \
-        if (buffer_size - chars_written <= chars_needed)            \
-        {                                                           \
-            buffer_size *= 2;                                       \
-            json_buffer = realloc(json_buffer, buffer_size);        \
-        }                                                           \
-        else                                                        \
-        {                                                           \
-            chars_written += chars_needed;                          \
-            break;                                                  \
-        }                                                           \
+typedef struct {
+    char* buffer;
+    size_t length;
+    size_t capacity;
+} string_t;
+
+static void init_string(string_t* s)
+{
+    s->capacity = 32;
+    s->length = 0;
+    s->buffer = malloc(s->capacity);
+}
+
+#define APPEND_STRING(s, fmt, ...)                          \
+    do {                                                    \
+        size_t chars_needed = snprintf(s.buffer + s.length, \
+            s.capacity - s.length,                          \
+            fmt,                                            \
+            __VA_ARGS__);                                   \
+        if (s.capacity - s.length <= chars_needed) {        \
+            s.capacity *= 2;                                \
+            s.buffer = realloc(s.buffer, s.capacity);       \
+        } else {                                            \
+            s.length += chars_needed;                       \
+            break;                                          \
+        }                                                   \
+    } while (true)
+
+#define APPEND_STRING_NO_ARGS(s, fmt)                       \
+    do {                                                    \
+        size_t chars_needed = snprintf(s.buffer + s.length, \
+            s.capacity - s.length,                          \
+            fmt);                                           \
+        if (s.capacity - s.length <= chars_needed) {        \
+            s.capacity *= 2;                                \
+            s.buffer = realloc(s.buffer, s.capacity);       \
+        } else {                                            \
+            s.length += chars_needed;                       \
+            break;                                          \
+        }                                                   \
     } while (true)
 
 static esp_err_t config_get_handler(httpd_req_t* req)
 {
     size_t param_count;
     const config_param_t* params = config_get_params(&param_count);
-    size_t buffer_size = 8;
-    char* json_buffer = malloc(buffer_size);
-    if (json_buffer == NULL) {
+    string_t json;
+    init_string(&json);
+    if (json.buffer == NULL) {
         httpd_resp_send_500(req);
         return ESP_ERR_NO_MEM;
     }
-    size_t chars_written = 0;
+    APPEND_STRING_NO_ARGS(json, "{");
     for (size_t i = 0; i < param_count; ++i) {
-        APPEND_STRING("abc12%s", "hello");
+        if (!strcmp(params[i].key, "password")) continue;
+        if (params[i].type == CONFIG_TYPE_STRING) {
+            char* val = config_get_string(params[i].key);
+            APPEND_STRING(json, "\"%s\":\"%s\",", params[i].key, val);
+            free(val);
+        } else {
+            int64_t val = 0;
+            config_get_int(params[i].key, &val);
+            APPEND_STRING(json, "\"%s\":%lld,", params[i].key, val);
+        }
     }
-    printf("%s\n", json_buffer);
-    httpd_resp_send_500(req);
+    json.buffer[json.length - 1] = '}';
+    json.buffer[json.length] = '\0';
+    httpd_resp_send(req, json.buffer, json.length);
+    free(json.buffer);
     return ESP_OK;
 }
 
@@ -220,6 +256,12 @@ static esp_err_t scan_wifi_post_handler(httpd_req_t *req)
     return ESP_OK;
 }
 
+static esp_err_t reboot_post_handler(httpd_req_t *req)
+{
+    httpd_resp_send(req, NULL, 0);
+    esp_restart();
+}
+
 static const httpd_uri_t scan = {
     .uri       = "/scan-wifi",
     .method    = HTTP_POST,
@@ -245,6 +287,13 @@ static const httpd_uri_t config_get_endpoint = {
     .uri       = "/config",
     .method    = HTTP_GET,
     .handler   = config_get_handler,
+    .user_ctx  = NULL,
+};
+
+static const httpd_uri_t reboot = {
+    .uri       = "/reboot",
+    .method    = HTTP_POST,
+    .handler   = reboot_post_handler,
     .user_ctx  = NULL,
 };
 
@@ -279,6 +328,7 @@ void http_server_start(void)
         httpd_register_uri_handler(server, &connect);
         httpd_register_uri_handler(server, &config_endpoint);
         httpd_register_uri_handler(server, &config_get_endpoint);
+        httpd_register_uri_handler(server, &reboot);
         httpd_register_err_handler(server, HTTPD_404_NOT_FOUND, http_404_error_handler);
         return;
     }

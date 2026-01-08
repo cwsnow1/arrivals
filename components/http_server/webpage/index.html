@@ -209,13 +209,6 @@
             fetch('/config')
                 .then(response => response.json())
                 .then(config => {
-                    if (config.ssid !== undefined) {
-                        currentSsid = config.ssid;
-                        document.getElementById('ssid').value = config.ssid;
-                    }
-                    if (config.password !== undefined) {
-                        document.getElementById('password').value = config.password;
-                    }
                     if (config.led_mode !== undefined) {
                         document.getElementById('led_mode').value = config.led_mode;
                     }
@@ -247,8 +240,8 @@
             formData.forEach((value, key) => {
                 if (key === 'brightness') {
                     config[key] = Math.round((parseInt(value) / 100) * 255);
-                } else if (key == 'password' || key == 'ssid') {
-                    if (value != '') {
+                } else if (key === 'password' || key === 'ssid') {
+                    if (value !== '') {
                         config[key] = value;
                     }
                 } else {
