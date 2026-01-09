@@ -18,6 +18,7 @@ set(COMPONENT_REQUIRES
 )
 
 set(COMPONENT_PRIV_REQUIRES
+    wifi
 )
 
 register_component()

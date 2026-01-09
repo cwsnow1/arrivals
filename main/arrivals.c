@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <time.h>
 
 #include "freertos/FreeRTOS.h"
@@ -8,15 +9,17 @@
 #include "esp_heap_caps.h"
 #include "esp_log.h"
 #include "esp_netif_sntp.h"
-#include "nvs_flash.h"
 #include "led_strip.h"
+#include "nvs_flash.h"
 
-#include "wifi.h"
 #include "api.h"
+#include "config.h"
 #include "cta.h"
 #include "display.h"
 #include "ui.h"
-#include "config.h"
+#include "wifi.h"
+
+#define RANDOM_COLOR_MAX    (4)
 
 static const char* TAG = "main";
 
@@ -75,21 +78,23 @@ static void marquee(void* user_data)
     led_strip_handle_t led_handle = (led_strip_handle_t) user_data;
     const uint16_t* indices[LINE_COUNT];
     size_t counts[LINE_COUNT];
-    uint16_t prev[LINE_COUNT];
     for (size_t i = 0; i < LINE_COUNT; ++i) {
         indices[i] = cta_get_leds_for_line(i, &counts[i]);
-        prev[i] = UINT16_MAX;
     }
+    const size_t trail_size = 3;
+    const size_t num_trains = 2;
     for (size_t i = 0;; ++i) {
         for (line_name_t line = RED_LINE; line < LINE_COUNT; ++line) {
-            size_t index = i % counts[line];
-            if (prev[line] != UINT16_MAX)
-                led_strip_set_pixel(led_handle, prev[line], 0, 0, 0);
-            led_strip_set_pixel(led_handle, indices[line][index], 64, 64, 64);
-            prev[line] = indices[line][index];
+            for (size_t j = 0; j < num_trains; ++j) {
+                size_t index = (i + (j * counts[line] / num_trains)) % counts[line];
+                size_t prev_index = (index - trail_size) % counts[line];
+                color_t color = cta_get_led_color(line);
+                led_strip_set_pixel(led_handle, indices[line][prev_index], 0, 0, 0);
+                led_strip_set_pixel(led_handle, indices[line][index], color.r, color.g, color.b);
+            }
         }
         led_strip_refresh(led_handle);
-        vTaskDelay(pdMS_TO_TICKS(2));
+        vTaskDelay(pdMS_TO_TICKS(20));
     }
 }
 
@@ -157,6 +162,54 @@ static void live_tracking(void* user_data)
             }
         }
 
+        led_strip_refresh(led_handle);
+    }
+}
+
+static void change_color(uint8_t* c)
+{
+    int8_t diff = rand() % 3;
+    switch (diff) {
+        case 0:
+        if (*c > 0) {
+            *c -= 1;
+        }
+        break;
+        case 1:
+        break;
+        case 2:
+        if (*c < RANDOM_COLOR_MAX) {
+            *c += 1;
+        }
+        break;
+    }
+}
+
+static void random_colors(void* user_data)
+{
+    ESP_LOGI(TAG, "Random color task entered");
+    led_strip_handle_t led_handle = (led_strip_handle_t) user_data;
+    color_t* color = malloc(sizeof(*color) * CTA_NUM_LEDS);
+    for (size_t i = 0; i < CTA_NUM_LEDS; ++i) {
+        color[i].r = rand() % RANDOM_COLOR_MAX;
+        color[i].g = rand() % RANDOM_COLOR_MAX;
+        color[i].b = rand() % RANDOM_COLOR_MAX;
+    }
+    for (;; vTaskDelay(pdMS_TO_TICKS(20))) {
+        for (size_t i = 0; i < CTA_NUM_LEDS; ++i) {
+            switch (rand() % 3) {
+                case 0:
+                change_color(&color[i].r);
+                break;
+                case 1:
+                change_color(&color[i].g);
+                break;
+                case 2:
+                change_color(&color[i].b);
+                break;
+            }
+            led_strip_set_pixel(led_handle, i, color[i].r, color[i].g, color[i].b);
+        }
         led_strip_refresh(led_handle);
     }
 }
@@ -245,18 +298,6 @@ void app_main(void)
 
     ui_init(display_lock);
 
-    if (ap) {
-        ui_ip();
-    } else {
-        int64_t lcd_mode;
-        config_get_int("lcd_mode", &lcd_mode);
-        if (lcd_mode == LCD_MODE_ARRIVALS) {
-            xTaskCreate(arrivals_lcd, "lcd_task", 8192, NULL, 4, NULL);
-        } else if (lcd_mode == LCD_MODE_OFF) {
-            display_set_brightness(0, 0);
-        }
-    }
-
     led_strip_config_t led_cfg = {
         .strip_gpio_num = GPIO_NUM_45,
         .max_leds = CTA_NUM_LEDS,
@@ -275,17 +316,6 @@ void app_main(void)
     led_strip_clear(led_handle);
 
     wifi_init();
-    char* ssid = config_get_string("ssid");
-    char* password = config_get_string("password");
-    if (ssid == NULL || ap) {
-        wifi_init_softap();
-    } else {
-        wifi_connect(ssid, password);
-        while (!wifi_is_connected()) {
-            vTaskDelay(pdMS_TO_TICKS(100));
-        }
-        sync_time();
-    }
 
     int64_t led_mode;
     config_get_int("led_mode", &led_mode);
@@ -300,6 +330,7 @@ void app_main(void)
         task = live_tracking;
         break;
     case LED_MODE_RANDOM_COLORS:
+        task = random_colors;
         break;
     case LED_MODE_SOLID_COLOR:
         task = solid_color;
@@ -312,4 +343,24 @@ void app_main(void)
     }
     if (task)
         xTaskCreate(task, "led_task", 8192, led_handle, 4, NULL);
+
+    char* ssid = config_get_string("ssid");
+    char* password = config_get_string("password");
+    if (ssid == NULL || ap) {
+        wifi_init_softap();
+        ui_ip();
+    } else {
+        wifi_connect(ssid, password);
+        while (!wifi_is_connected()) {
+            vTaskDelay(pdMS_TO_TICKS(100));
+        }
+        sync_time();
+        int64_t lcd_mode;
+        config_get_int("lcd_mode", &lcd_mode);
+        if (lcd_mode == LCD_MODE_ARRIVALS) {
+            xTaskCreate(arrivals_lcd, "lcd_task", 8192, NULL, 4, NULL);
+        } else if (lcd_mode == LCD_MODE_OFF) {
+            display_set_brightness(0, 0);
+        }
+    }
 }

@@ -509,9 +509,9 @@ typedef struct stop {
 } stop_t;
 
 typedef struct {
-    uint8_t r;
-    uint8_t g;
     uint8_t b;
+    uint8_t g;
+    uint8_t r;
 } color_t;
 
 const uint16_t* cta_get_leds_for_line(line_name_t line, size_t* count);
