@@ -520,3 +520,4 @@ const char* cta_get_line_name(line_name_t line);
 line_name_t cta_get_line_from_name(const char* line_name);
 color_t cta_get_led_color(line_name_t line);
 color_t cta_get_lcd_color(line_name_t line);
+location_t cta_get_station_location(station_id_t station);

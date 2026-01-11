@@ -9,3 +9,4 @@ bool wifi_is_connected(void);
 bool wifi_test_connection(const char* ssid, const char* password);
 void wifi_get_ap_info(const char** ssid, const char** password);
 const char* wifi_get_ap_ip_address(void);
+const char* wifi_get_sta_ip_address(void);

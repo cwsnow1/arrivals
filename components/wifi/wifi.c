@@ -148,8 +148,6 @@ void wifi_init_softap(void)
              WIFI_AP_SSID, WIFI_AP_PASSWD, WIFI_AP_CHANNEL);
 
     ESP_ERROR_CHECK(esp_wifi_start());
-
-    http_server_start();
 }
 
 const char* wifi_get_mac(void)
@@ -208,5 +206,14 @@ const char* wifi_get_ap_ip_address(void)
     esp_netif_ip_info_t ip_info;
     esp_netif_get_ip_info(s_apif, &ip_info);
     sprintf(ip_buffer, "http://" IPSTR "", IP2STR(&ip_info.ip));
+    return ip_buffer;
+}
+
+const char* wifi_get_sta_ip_address(void)
+{
+    static char ip_buffer[32];
+    esp_netif_ip_info_t ip_info;
+    esp_netif_get_ip_info(s_netif, &ip_info);
+    sprintf(ip_buffer, IPSTR, IP2STR(&ip_info.ip));
     return ip_buffer;
 }

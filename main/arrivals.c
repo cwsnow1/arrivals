@@ -1,3 +1,4 @@
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
@@ -16,28 +17,13 @@
 #include "config.h"
 #include "cta.h"
 #include "display.h"
+#include "http_server.h"
 #include "ui.h"
 #include "wifi.h"
 
 #define RANDOM_COLOR_MAX    (4)
 
 static const char* TAG = "main";
-
-typedef enum {
-    LED_MODE_OFF,
-    LED_MODE_LINE_COLORS,
-    LED_MODE_LIVE_TRACKING,
-    LED_MODE_RANDOM_COLORS,
-    LED_MODE_SOLID_COLOR,
-    LED_MODE_MARQUEE,
-    LED_MODE_BREATHING,
-} led_mode_t;
-
-typedef enum {
-    LCD_MODE_OFF,
-    LCD_MODE_ARRIVALS,
-} lcd_mode_t;
-
 
 static void sync_time(void)
 {
@@ -60,15 +46,8 @@ static void light_stop(led_strip_handle_t led_handle, led_segment_t segment, col
     if (progress == 1.0f || segment.rail.count == 0) {
         led_strip_set_pixel(led_handle, segment.station, color.r, color.g, color.b);
     } else {
-        int8_t increment = 1;
-        if (segment.rail.count < 0) {
-            increment = -1;
-            segment.rail.count = -segment.rail.count;
-        }
-        for (size_t i = 0; i < segment.rail.count; ++i) {
-            led_strip_set_pixel(led_handle, segment.rail.start, 1 * color.r, 1 * color.g, 1 * color.b);
-            segment.rail.start += increment;
-        }
+        size_t index = segment.rail.start + (int) roundf(progress * segment.rail.count);
+        led_strip_set_pixel(led_handle, index, 1 * color.r, 1 * color.g, 1 * color.b);
     }
 }
 
@@ -81,8 +60,11 @@ static void marquee(void* user_data)
     for (size_t i = 0; i < LINE_COUNT; ++i) {
         indices[i] = cta_get_leds_for_line(i, &counts[i]);
     }
-    const size_t trail_size = 3;
-    const size_t num_trains = 2;
+    int64_t ret;
+    config_get_int("m_train_len", &ret);
+    size_t trail_size = (size_t) ret;
+    config_get_int("m_num_train", &ret);
+    size_t num_trains = (size_t) ret;
     for (size_t i = 0;; ++i) {
         for (line_name_t line = RED_LINE; line < LINE_COUNT; ++line) {
             for (size_t j = 0; j < num_trains; ++j) {
@@ -144,11 +126,23 @@ static void live_tracking(void* user_data)
 {
     ESP_LOGI(TAG, "Live tracking task entered");
     led_strip_handle_t led_handle = (led_strip_handle_t) user_data;
-    for (;; vTaskDelay(pdMS_TO_TICKS(10000))) {
-        line_t* lines = api_get();
-        if (lines == NULL) {
-            continue;
+
+    const size_t refresh_interval = 1000;
+    int64_t update_interval;
+    config_get_int("led_period", &update_interval);
+    const size_t mod = update_interval / refresh_interval;
+
+    for (size_t tick = 0;; ++tick, vTaskDelay(pdMS_TO_TICKS(refresh_interval))) {
+        line_t* lines = NULL;
+        if (tick % mod == 0) {
+            lines = api_get();
+            if (lines == NULL) {
+                continue;
+            }
+        } else {
+            lines = api_update_eta(1);
         }
+
         for (size_t i = 0; i < CTA_NUM_LEDS; ++i) {
             led_strip_set_pixel(led_handle, i, 0, 0, 0);
         }
@@ -158,7 +152,11 @@ static void live_tracking(void* user_data)
                 if (segment.station == 0) {
                     continue;
                 }
-                light_stop(led_handle, segment, cta_get_led_color(i), lines[i].trains[j].progress);
+                if (lines[i].trains[j].delayed && tick % 2) {
+                    light_stop(led_handle, segment, (color_t) { .r = 1, .g = 0 , .b = 0}, lines[i].trains[j].progress);
+                } else {
+                    light_stop(led_handle, segment, cta_get_led_color(i), lines[i].trains[j].progress);
+                }
             }
         }
 
@@ -216,9 +214,19 @@ static void random_colors(void* user_data)
 
 static void arrivals_lcd(void* user_data)
 {
+    ESP_LOGI(TAG, "arrivals_lcd entry");
+    ui_connecting(false);
+    while (!wifi_is_connected()) {
+        vTaskDelay(pdMS_TO_TICKS(100));
+    }
+    ui_connecting(true);
     ui_arrivals();
-    for (;; vTaskDelay(pdMS_TO_TICKS(150000))) {
-        expected_trains_t trains = api_get_expected(CLARK_LAKE_BLUE_BROWN_GREEN_ORANGE_PURPLE_PINK);
+    int64_t update_interval;
+    config_get_int("lcd_period", &update_interval);
+    TickType_t delay_ticks = pdMS_TO_TICKS(update_interval);
+    for (;; vTaskDelay(delay_ticks)) {
+        expected_trains_t trains = api_get_expected(HAROLD_WASHINGTON_LIBRARY_STATE_VAN_BUREN_BROWN_ORANGE_PURPLE_PINK);
+        if (trains.count == 0) continue;
         for (size_t i = 0; i < UI_NUM_ROWS; ++i) {
             if (i < trains.count) {
                 lv_color_t lv_color;
@@ -252,9 +260,6 @@ void app_main(void)
     tzset();
 
     int64_t ap;
-    if (!config_get_int("ap", &ap)) {
-        config_set_int("ap", 1);
-    }
     config_get_int("ap", &ap);
     if (ap) {
         config_set_int("ap", 0);
@@ -347,14 +352,12 @@ void app_main(void)
     char* ssid = config_get_string("ssid");
     char* password = config_get_string("password");
     if (ssid == NULL || ap) {
+        printf("ssid=%p, ap=%lld\n", ssid, ap);
         wifi_init_softap();
+        http_server_start();
+        display_set_brightness(255, 500);
         ui_ip();
     } else {
-        wifi_connect(ssid, password);
-        while (!wifi_is_connected()) {
-            vTaskDelay(pdMS_TO_TICKS(100));
-        }
-        sync_time();
         int64_t lcd_mode;
         config_get_int("lcd_mode", &lcd_mode);
         if (lcd_mode == LCD_MODE_ARRIVALS) {
@@ -362,5 +365,11 @@ void app_main(void)
         } else if (lcd_mode == LCD_MODE_OFF) {
             display_set_brightness(0, 0);
         }
+        wifi_connect(ssid, password);
+        while (!wifi_is_connected()) {
+            vTaskDelay(pdMS_TO_TICKS(100));
+        }
+        http_server_start();
+        sync_time();
     }
 }

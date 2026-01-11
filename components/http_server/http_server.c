@@ -54,6 +54,7 @@ static esp_err_t index_get_handler(httpd_req_t *req)
         free(buf);
     }
 
+    httpd_resp_set_hdr(req, "Content-Encoding", "gzip");
     const char* resp_str = (const char*) index_html;
     httpd_resp_send(req, resp_str, index_html_size);
 
@@ -107,7 +108,9 @@ static esp_err_t config_post_handler(httpd_req_t* req)
         } else {
             int64_t val = 0;
             if (json_obj_get_int64(&ctx, params[i].key, &val) != OS_SUCCESS) {
-                json_obj_get_string(&ctx, params[i].key, buffer, sizeof buffer);
+                if (json_obj_get_string(&ctx, params[i].key, buffer, sizeof buffer) != OS_SUCCESS) {
+                    continue;
+                }
                 val = strtoll(buffer, NULL, 10);
             }
             config_set_int(params[i].key, val);

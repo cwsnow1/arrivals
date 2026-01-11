@@ -4,8 +4,10 @@
 
 #include "driver/i2c_master.h"
 
-#define LCD_H       (320)
-#define LCD_V       (240)
+#define LCD_H                   (320)
+#define LCD_V                   (240)
+#define BACKLIGHT_RESOULTION    (8)
+#define MAX_BRIGHTNESS          (1 << BACKLIGHT_RESOULTION)
 
 typedef struct {
     struct {

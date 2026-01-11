@@ -10,3 +10,8 @@ const char* ui_get_ap_ip_address(void)
 {
     return wifi_get_ap_ip_address();
 }
+
+const char* ui_get_sta_ip_address(void)
+{
+    return wifi_get_sta_ip_address();
+}

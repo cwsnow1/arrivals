@@ -108,7 +108,11 @@ int main(void)
 
     ui_init(lock);
 
-    ui_ip();
+    ui_arrivals();
+
+    ui_set_station("LaSalle/Van Buren");
+
+    ui_set_row(0, "95th/Dan Ryan", 456, "Blue", line_colors[1], -1);
 
     while (!WindowShouldClose()) {
         t += GetFrameTime();

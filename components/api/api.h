@@ -10,6 +10,10 @@ typedef struct {
     float progress;
     stop_id_t next_stop;
     uint16_t rn;
+    uint16_t eta;
+    uint16_t original_eta;
+    uint8_t arr     : 1;
+    uint8_t delayed : 1;
 } train_t;
 
 typedef struct {
@@ -32,6 +36,7 @@ typedef struct {
 
 line_t* api_get(void);
 expected_trains_t api_get_expected(station_id_t station);
+line_t* api_update_eta(uint16_t time_step);
 
 #ifdef __cplusplus
 }

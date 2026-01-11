@@ -11,4 +11,6 @@ idf_component_register(
              esp_netif
              config
              esp_driver_gpio
+             http_server
+             esp_timer
 )

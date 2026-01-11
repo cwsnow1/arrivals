@@ -1,5 +1,6 @@
-#include <time.h>
+#include <math.h>
 #include <stdio.h>
+#include <time.h>
 
 #include "esp_log.h"
 #include "json_parser.h"
@@ -12,6 +13,7 @@ static const char* TAG = "api";
 
 #define API_ENDPOINT "http://lapi.transitchicago.com/api/1.0/ttpositions.aspx?rt=%s&outputType=JSON&key=" CONFIG_API_KEY
 #define STATION_ENDPOINT "http://lapi.transitchicago.com/api/1.0/ttarrivals.aspx?mapid=%d&max=3&outputType=JSON&key=" CONFIG_API_KEY
+#define DIST_THRESHOLD (0.001f)
 
 static const char* line_names[] = {
     [RED_LINE] = "red",
@@ -42,8 +44,31 @@ static int timestamp_subtract(const char* arrival_ts)
         .tm_mon = month - 1,
         .tm_year = year - 1900,
     };
-
     return mktime(&t) - time(NULL);
+}
+
+line_t* api_update_eta(uint16_t time_step)
+{
+    for (line_name_t line = 0; line < LINE_COUNT; ++line) {
+        for (size_t i = 0; i < s_lines[line].count; ++i) {
+            train_t* train = &s_lines[line].trains[i];
+            if (train->progress == 1.0f) continue;
+            if (train->eta > time_step) {
+                train->eta -= time_step;
+            } else {
+                train->eta = 0;
+            }
+            if (train->original_eta != 0) {
+                float progress = 1.0f - ((float) train->eta / train->original_eta);
+                if (progress > train->progress) {
+                    train->progress = progress;
+                }
+            } else {
+                train->progress = 1.0f;
+            }
+        }
+    }
+    return s_lines;
 }
 
 static void decode(http_response_t r, line_name_t line)
@@ -95,36 +120,63 @@ static void decode(http_response_t r, line_name_t line)
                 s_lines[line].count++;
                 s_lines[line].trains = realloc(s_lines[line].trains, sizeof(*s_lines[line].trains) * s_lines[line].count);
                 train = &s_lines[line].trains[s_lines[line].count - 1];
+                memset(train, 0, sizeof *train);
             }
             train->rn = rn;
 
-            json_obj_get_string(&ctx, "nextStpId", buffer, sizeof buffer);
-            train->next_stop = strtoul(buffer, NULL, 10);
-
-            json_obj_get_string(&ctx, "nextStaNm", buffer, sizeof buffer);
-            //printf("Run %d arrival at %-30s ", rn, buffer);
+            json_obj_get_string(&ctx, "nextStaId", buffer, sizeof buffer);
+            station_id_t station = (station_id_t) strtol(buffer, NULL, 10);
 
             json_obj_get_string(&ctx, "arrT", buffer, sizeof buffer);
-            //printf("at %s, seconds remaining: %4d ", buffer, timestamp_subtract(buffer));
+            int eta = timestamp_subtract(buffer);
+            if (eta < 0) {
+                eta = 0;
+            }
 
-            json_obj_get_string(&ctx, "lat", buffer, sizeof buffer);
-            //printf("%8s ", buffer);
-
-            json_obj_get_string(&ctx, "lon", buffer, sizeof buffer);
-            //printf("%8s ", buffer);
+            json_obj_get_string(&ctx, "nextStpId", buffer, sizeof buffer);
+            stop_id_t next_stop = strtoul(buffer, NULL, 10);
+            if (next_stop != train->next_stop) {
+                train->original_eta = eta;
+                train->progress = 0.0f;
+            } else if (train->original_eta < eta) {
+                train->original_eta = eta;
+            } else {
+                if (train->original_eta != 0) {
+                    float progress = 1.0f - ((float) eta / train->original_eta);
+                    if (progress > train->progress) {
+                        // don't move trains backwards even if the ETA is updated
+                        train->progress = progress;
+                    }
+                } else {
+                    train->progress = 1.0f;
+                }
+            }
+            train->eta = eta;
+            train->next_stop = next_stop;
 
             json_obj_get_string(&ctx, "isApp", buffer, sizeof buffer);
             if (!strcmp(buffer, "1")) {
-                train->progress = 1.0f;
-            } else {
-                train->progress = 0.0f;
+                json_obj_get_string(&ctx, "lat", buffer, sizeof buffer);
+                float lat = strtod(buffer, NULL);
+
+                json_obj_get_string(&ctx, "lon", buffer, sizeof buffer);
+                float lon = strtof(buffer, NULL);
+                location_t loc = cta_get_station_location(station);
+
+                if (loc.lat - lat < DIST_THRESHOLD &&
+                    loc.lat - lat > -DIST_THRESHOLD &&
+                    loc.lon - lon < DIST_THRESHOLD &&
+                    loc.lon - lon > -DIST_THRESHOLD) {
+                    train->progress = 1.0f;
+                }
             }
 
             json_obj_get_string(&ctx, "isDly", buffer, sizeof buffer);
             if (!strcmp(buffer, "1")) {
-                //printf(" (DELAY)");
+                train->delayed = 1;
+            } else {
+                train->delayed = 0;
             }
-            //printf("\n");
 
             json_arr_leave_object(&ctx);
         }
@@ -183,6 +235,9 @@ static expected_trains_t decode_arrivals(http_response_t r)
 
         json_obj_get_string(&ctx, "arrT", buffer, sizeof buffer);
         ret.trains[i].eta = timestamp_subtract(buffer) / 60;
+        if (ret.trains[i].eta > 60) {
+            ret.trains[i].eta = -1;
+        }
     
         json_obj_get_string(&ctx, "isApp", buffer, sizeof buffer);
         if (!strcmp(buffer, "1")) {
@@ -209,16 +264,10 @@ line_t* api_get(void)
         return NULL;
     }
     ESP_LOGD(TAG, "Starting requests");
-    http_response_t responses[LINE_COUNT];
     char url[128];
     for (size_t i = 0; i < LINE_COUNT; ++i) {
         sprintf(url, API_ENDPOINT, line_names[i]);
-        responses[i] = http_get_and_keep_open(url);
-    }
-    http_close();
-    ESP_LOGD(TAG, "Done");
-    for (size_t i = 0; i < LINE_COUNT; ++i) {
-        decode(responses[i], i);
+        decode(http_get(url), i);
     }
     return s_lines;
 }

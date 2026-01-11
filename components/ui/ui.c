@@ -16,6 +16,9 @@ static lv_obj_t* station_label;
 void ui_init(lock_fn_t lock_fn)
 {
     s_lock = lock_fn;
+    s_lock(true);
+    lv_obj_set_style_bg_color(lv_screen_active(), (lv_color_t) { 33, 33, 33 }, 0);
+    s_lock(false);
 }
 
 void ui_ip(void)
@@ -54,18 +57,54 @@ void ui_ip(void)
     s_lock(false);
 }
 
+void close_msgbox(lv_timer_t* timer)
+{
+    lv_obj_t* msg = lv_timer_get_user_data(timer);
+    lv_msgbox_close(msg);
+    lv_timer_delete(timer);
+}
+
+void ui_connecting(bool connected)
+{
+    static lv_obj_t* lbl;
+
+    s_lock(true);
+
+    if (connected) {
+        lv_obj_delete(lbl);
+        lv_obj_t* msg = lv_msgbox_create(NULL);
+        lv_obj_set_style_text_font(msg, &arimo_32, 0);
+        lv_msgbox_add_text(msg, ui_get_sta_ip_address());
+        lv_timer_create(close_msgbox, 5 * 1000, msg);
+        s_lock(false);
+        return;
+    }
+    lbl = lv_label_create(lv_screen_active());
+    lv_label_set_text_static(lbl, "Connecting...");
+    lv_obj_set_style_text_font(lbl, &arimo_32, 0);
+    lv_obj_set_style_text_color(lbl, (lv_color_t) { 255, 255, 255 }, 0);
+    lv_obj_center(lbl);
+
+    s_lock(false);
+}
+
 void ui_arrivals(void)
 {
     s_lock(true);
 
-    lv_obj_set_style_bg_color(lv_screen_active(), (lv_color_t) { 33, 33, 33 }, 0);
-
     station_label = lv_label_create(lv_screen_active());
-    lv_label_set_long_mode(station_label, LV_LABEL_LONG_MODE_SCROLL_CIRCULAR);
-    lv_label_set_text(station_label, "N/A");
+    lv_label_set_text(station_label, "Next 'L' services at");
     lv_obj_set_style_text_font(station_label, &arimo_18, 0);
     lv_obj_set_style_text_color(station_label, (lv_color_t) { 255, 255, 255 }, 0);
     lv_obj_align(station_label, LV_ALIGN_TOP_LEFT, UI_W / 20 + 5, 5);
+
+    station_label = lv_label_create(lv_screen_active());
+    lv_label_set_long_mode(station_label, LV_LABEL_LONG_MODE_SCROLL_CIRCULAR);
+    lv_obj_set_style_text_font(station_label, &arimo_18, 0);
+    lv_obj_set_style_text_color(station_label, (lv_color_t) { 255, 255, 255 }, 0);
+    lv_obj_align(station_label, LV_ALIGN_TOP_LEFT, 175, 5);
+    lv_label_set_text_static(station_label, "");
+    lv_obj_set_width(station_label, 140);
 
     lv_obj_set_style_pad_all(lv_screen_active(), 0, 0);
 
@@ -108,7 +147,9 @@ void ui_arrivals(void)
         lbl = lv_label_create(rows[i]);
         lv_label_set_text(lbl, "10 min");
         lv_obj_set_style_text_font(lbl, &arimo_32, 0);
+        lv_obj_set_style_text_align(lbl, LV_TEXT_ALIGN_RIGHT, 0);
         lv_obj_align(lbl, LV_ALIGN_BOTTOM_RIGHT, -5, -5);
+        lv_label_set_long_mode(lbl, LV_LABEL_LONG_MODE_SCROLL_CIRCULAR);
     }
 
     s_lock(false);
@@ -136,10 +177,19 @@ void ui_set_row(int row_idx,
     lbl = lv_obj_get_child_by_type(rows[row_idx], 2, &lv_label_class);
     if (min_remaining > 0) {
         lv_label_set_text_fmt(lbl, "%d min", min_remaining);
+        lv_obj_refr_size(lbl);
     } else if (min_remaining == 0) {
         lv_label_set_text_static(lbl, "Due");
+        lv_obj_refr_size(lbl);
     } else {
         lv_label_set_text_static(lbl, "Delayed");
+        lv_point_t dest_size;
+        lv_text_get_size(&dest_size, dest, &arimo_32, 0, 0, LV_COORD_MAX, 0);
+        if (dest_size.x > UI_W / 2) {
+            lv_obj_set_width(lbl, 95);
+        } else {
+            lv_obj_refr_size(lbl);
+        }
     }
 
     s_lock(false);
@@ -166,7 +216,7 @@ void ui_set_station(const char* station_name)
 {
     s_lock(true);
 
-    lv_label_set_text_fmt(station_label, "Next 'L' services at %s", station_name);
+    lv_label_set_text(station_label, station_name);
 
     s_lock(false);
 }

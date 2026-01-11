@@ -15,6 +15,7 @@ typedef void(*lock_fn_t)(bool);
 
 void ui_init(lock_fn_t lock_fn);
 void ui_ip(void);
+void ui_connecting(bool connected);
 void ui_arrivals(void);
 void ui_set_station(const char* station_name);
 void ui_set_row(int row_idx,

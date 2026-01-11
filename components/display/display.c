@@ -40,12 +40,10 @@ static const char* TAG = "display";
 
 #define LVGL_TICK_PERIOD_MS (5)
 
-#define BACKLIGHT_RESOULTION    (8)
-#define BACKLIGHT_FREQUENCY     (1000)
-#define MAX_BRIGHTNESS          (1 << BACKLIGHT_RESOULTION)
-#define MIN_BRIGHTNESS          ((1 << BACKLIGHT_RESOULTION) / 8)
+#define BACKLIGHT_FREQUENCY (250)
+#define MIN_BRIGHTNESS      ((1 << BACKLIGHT_RESOULTION) / 8)
 
-#define SPI_FREQ_HZ             (24 * 1000 * 1000)
+#define SPI_FREQ_HZ         (24 * 1000 * 1000)
 
 static QueueHandle_t s_touch_q;
 static _lock_t lvgl_api_lock;
@@ -258,7 +256,7 @@ static void init_lvgl(esp_lcd_panel_handle_t panel, esp_lcd_panel_io_handle_t io
 
     ESP_LOGI(TAG, "Create LVGL task");
     _lock_init(&lvgl_api_lock);
-    xTaskCreatePinnedToCore(lvgl_port_task, "LVGL", 8192, NULL, 2, &s_lvgl_task, 1);
+    xTaskCreate(lvgl_port_task, "LVGL", 8192, NULL, 2, &s_lvgl_task);
 }
 
 void display_init(const display_cfg_t* cfg)

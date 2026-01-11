@@ -1,3 +1,4 @@
+#include <assert.h>
 #include <string.h>
 
 #include "cta.h"
@@ -550,7 +551,7 @@ static const uint16_t purple_indices[] = {
     123, 124, 125, 126, 127, 128, 129, 130, 131, 132, 133, 134, 135, 136, 137, 138,
     139, 140, 141, 142, 143, 144, 145, 146, 147, 148, 149, 150, 151, 152, 153, 128, 127, 126,
     125, 124, 123, 122, 121, 120, 119, 118, 117, 116, 115, 114, 113, 112, 111, 110,
-    109, 108, 107, 106, 105, 104, 103, 102, 101, 100, 99, 98, 97, 96, 95, 94,
+    109, 108, 107, 106, 105, 104, 103, 102, 101, 100, 99, 98, 97, 96, 95, 94, 93, 92, 91
 };
 
 static const uint16_t yellow_indices[] = {
@@ -635,10 +636,23 @@ static const color_t line_colors_rgb[] = {
 
 color_t cta_get_led_color(line_name_t line)
 {
+    assert(line < LINE_COUNT);
     return line_colors_led[line];
 }
 
 color_t cta_get_lcd_color(line_name_t line)
 {
+    assert(line < LINE_COUNT);
     return line_colors_rgb[line];
+}
+
+location_t cta_get_station_location(station_id_t station)
+{
+    // TODO: improve linear search?
+    for (size_t i = 0; i < numberof(stations); ++i) {
+        if (stations[i].id == station) {
+            return stations[i].location;
+        }
+    }
+    return (location_t) { 0 };
 }

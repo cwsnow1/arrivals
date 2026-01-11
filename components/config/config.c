@@ -16,12 +16,19 @@ static nvs_handle_t s_handle;
 static void update_brightness(void*);
 
 static const config_param_t s_params[] = {
-    { .key = "ssid",       .type = CONFIG_TYPE_STRING },
-    { .key = "password",   .type = CONFIG_TYPE_STRING },
-    { .key = "led_mode",   .type = CONFIG_TYPE_INT },
-    { .key = "lcd_mode",   .type = CONFIG_TYPE_INT },
-    { .key = "brightness", .type = CONFIG_TYPE_INT, .update_cb = update_brightness },
-    { .key = "ap",         .type = CONFIG_TYPE_INT },
+    { .key = "ssid",        .type = CONFIG_TYPE_STRING },
+    { .key = "password",    .type = CONFIG_TYPE_STRING },
+    { .key = "led_mode",    .type = CONFIG_TYPE_INT,    .default_val = { .i = LED_MODE_LINE_COLORS } },
+    { .key = "led_bright",  .type = CONFIG_TYPE_INT,    .default_val = { .i = 0 }},
+    { .key = "lcd_mode",    .type = CONFIG_TYPE_INT,    .default_val = { .i = LED_BRIGHTNESS_LOW } },
+    { .key = "brightness",  .type = CONFIG_TYPE_INT,    .update_cb = update_brightness, .default_val = { .i = MAX_BRIGHTNESS } },
+    { .key = "ap",          .type = CONFIG_TYPE_INT,    .default_val = { .i = 1 } },
+    { .key = "api_key",     .type = CONFIG_TYPE_STRING, .default_val = { .s = CONFIG_API_KEY }},
+    { .key = "station",     .type = CONFIG_TYPE_INT,    .default_val = { .i = 40380 }},
+    { .key = "m_num_train", .type = CONFIG_TYPE_INT,    .default_val = { .i = 2 }},
+    { .key = "m_train_len", .type = CONFIG_TYPE_INT,    .default_val = { .i = 2 }},
+    { .key = "lcd_period",  .type = CONFIG_TYPE_INT,    .default_val = { .i = 15000 }},
+    { .key = "led_period",  .type = CONFIG_TYPE_INT,    .default_val = { .i = 10000 }},
 };
 
 static int get_param_index(const char* key)
@@ -71,6 +78,13 @@ char* config_get_string(const char* key)
 {
     size_t len;
     if (nvs_get_str(s_handle, key, NULL, &len) != ESP_OK) {
+        int index = get_param_index(key);
+        if (index > 0 && s_params[index].default_val.s) {
+            nvs_set_str(s_handle, key, s_params[index].default_val.s);
+            char* ret = malloc(strlen(s_params[index].default_val.s));
+            strcpy(ret, s_params[index].default_val.s);
+            return ret;
+        }
         return NULL;
     }
     char* ret = malloc(len);
@@ -81,6 +95,12 @@ char* config_get_string(const char* key)
 bool config_get_int(const char* key, int64_t* out)
 {
     if (nvs_get_i64(s_handle, key, out) != ESP_OK) {
+        int index = get_param_index(key);
+        if (index > 0) {
+            nvs_set_i64(s_handle, key, s_params[index].default_val.i);
+            *out = s_params[index].default_val.i;
+            return true;
+        }
         *out = -1;
         return false;
     }
