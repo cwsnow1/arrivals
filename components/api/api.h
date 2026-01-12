@@ -34,9 +34,9 @@ typedef struct {
     size_t count;
 } expected_trains_t;
 
-line_t* api_get(void);
+line_t api_get(line_name_t line);
 expected_trains_t api_get_expected(station_id_t station);
-line_t* api_update_eta(uint16_t time_step);
+line_t api_update_eta(line_name_t line, uint16_t time_step);
 
 #ifdef __cplusplus
 }

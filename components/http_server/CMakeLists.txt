@@ -14,6 +14,7 @@ set(COMPONENT_PRIV_REQUIRES
     wifi
     config
     esp_wifi
+    cta
 )
 
 set(COMPONENT_REQUIRES

@@ -10,6 +10,7 @@
 #include "esp_heap_caps.h"
 #include "esp_log.h"
 #include "esp_netif_sntp.h"
+#include "esp_timer.h"
 #include "led_strip.h"
 #include "nvs_flash.h"
 
@@ -22,6 +23,9 @@
 #include "wifi.h"
 
 #define RANDOM_COLOR_MAX    (4)
+#ifndef MIN
+#define MIN(x, y) (x < y ? x : y)
+#endif
 
 static const char* TAG = "main";
 
@@ -41,13 +45,37 @@ static void sync_time(void)
     }
 }
 
+static void _led_strip_set_pixel(led_strip_handle_t led_handle, uint32_t index, uint32_t r, uint32_t g, uint32_t b)
+{
+    static uint32_t scale = 0;
+    if (!scale) {
+        int64_t tmp;
+        config_get_int("led_bright", &tmp);
+        switch (tmp) {
+            case LED_BRIGHTNESS_LOW:
+            scale = 1;
+            break;
+            case LED_BRIGHTNESS_MED:
+            scale = 2;
+            break;
+            case LED_BRIGHTNESS_HIGH:
+            scale = 4;
+            break;
+        }
+    }
+    r = MIN(UINT8_MAX, r * scale);
+    g = MIN(UINT8_MAX, g * scale);
+    b = MIN(UINT8_MAX, b * scale);
+    led_strip_set_pixel(led_handle, index, r, g, b);
+}
+
 static void light_stop(led_strip_handle_t led_handle, led_segment_t segment, color_t color, float progress)
 {
     if (progress == 1.0f || segment.rail.count == 0) {
-        led_strip_set_pixel(led_handle, segment.station, color.r, color.g, color.b);
+        _led_strip_set_pixel(led_handle, segment.station, color.r, color.g, color.b);
     } else {
         size_t index = segment.rail.start + (int) roundf(progress * segment.rail.count);
-        led_strip_set_pixel(led_handle, index, 1 * color.r, 1 * color.g, 1 * color.b);
+        _led_strip_set_pixel(led_handle, index, 1 * color.r, 1 * color.g, 1 * color.b);
     }
 }
 
@@ -64,19 +92,34 @@ static void marquee(void* user_data)
     config_get_int("m_train_len", &ret);
     size_t trail_size = (size_t) ret;
     config_get_int("m_num_train", &ret);
-    size_t num_trains = (size_t) ret;
+    marquee_train_count_t count = (marquee_train_count_t) ret;
+    size_t num_trains[LINE_COUNT];
+    for (line_name_t l = 0; l < LINE_COUNT; ++l) {
+        if (count == MARQUEE_TRAIN_COUNT_LOW) {
+            num_trains[l] = 1;
+        } else if (count == MARQUEE_TRAIN_COUNT_MEDIUM) {
+            num_trains[l] = (size_t) ceilf((float) counts[l] /  60.0f);
+        } else {
+            num_trains[l] = (size_t) ceilf((float) counts[l] /  30.0f);
+        }
+    }
+
+    config_get_int("m_period", &ret);
+    TickType_t delay = pdMS_TO_TICKS(ret);
+
+
     for (size_t i = 0;; ++i) {
         for (line_name_t line = RED_LINE; line < LINE_COUNT; ++line) {
-            for (size_t j = 0; j < num_trains; ++j) {
-                size_t index = (i + (j * counts[line] / num_trains)) % counts[line];
+            for (size_t j = 0; j < num_trains[line]; ++j) {
+                size_t index = (i + (j * counts[line] / num_trains[line])) % counts[line];
                 size_t prev_index = (index - trail_size) % counts[line];
                 color_t color = cta_get_led_color(line);
-                led_strip_set_pixel(led_handle, indices[line][prev_index], 0, 0, 0);
-                led_strip_set_pixel(led_handle, indices[line][index], color.r, color.g, color.b);
+                _led_strip_set_pixel(led_handle, indices[line][prev_index], 0, 0, 0);
+                _led_strip_set_pixel(led_handle, indices[line][index], color.r, color.g, color.b);
             }
         }
         led_strip_refresh(led_handle);
-        vTaskDelay(pdMS_TO_TICKS(20));
+        vTaskDelay(delay);
     }
 }
 
@@ -90,7 +133,7 @@ static void line_colors(void* user_data)
         indices[line] = cta_get_leds_for_line(line, &counts[line]);
         for (size_t j = 0; j < counts[line]; ++j) {
             color_t c = cta_get_led_color(line);
-            led_strip_set_pixel(led_handle, indices[line][j], c.r, c.g, c.b);
+            _led_strip_set_pixel(led_handle, indices[line][j], c.r, c.g, c.b);
         }
     }
     // Refreshing every 10 seconds because sometimes single-time writes don't work
@@ -114,11 +157,28 @@ static void solid_color(void* user_data)
         memcpy(&color, &color_int, sizeof color);
     }
     for (size_t i = 0; i < CTA_NUM_LEDS; ++i) {
-        led_strip_set_pixel(led_handle, i, color.r, color.g, color.b);
+        _led_strip_set_pixel(led_handle, i, color.r, color.g, color.b);
     }
     // Refreshing every 10 seconds because sometimes single-time writes don't work
     for (;; vTaskDelay(pdMS_TO_TICKS(10000))) {
         led_strip_refresh(led_handle);
+    }
+}
+
+static void light_line(led_strip_handle_t led_handle, line_name_t line_index, line_t line)
+{
+    static bool delay_flag[LINE_COUNT];
+    delay_flag[line_index] = !delay_flag[line_index];
+    for (size_t j = 0; j < line.count; ++j) {
+        led_segment_t segment = cta_get_leds(line.trains[j].next_stop, line_index);
+        if (segment.station == 0) {
+            continue;
+        }
+        if (line.trains[j].delayed && delay_flag[line_index]) {
+            light_stop(led_handle, segment, (color_t) { .r = 1, .g = 0 , .b = 0}, line.trains[j].progress);
+        } else {
+            light_stop(led_handle, segment, cta_get_led_color(line_index), line.trains[j].progress);
+        }
     }
 }
 
@@ -127,37 +187,38 @@ static void live_tracking(void* user_data)
     ESP_LOGI(TAG, "Live tracking task entered");
     led_strip_handle_t led_handle = (led_strip_handle_t) user_data;
 
-    const size_t refresh_interval = 1000;
     int64_t update_interval;
     config_get_int("led_period", &update_interval);
-    const size_t mod = update_interval / refresh_interval;
+    int64_t t = 0;
 
-    for (size_t tick = 0;; ++tick, vTaskDelay(pdMS_TO_TICKS(refresh_interval))) {
-        line_t* lines = NULL;
-        if (tick % mod == 0) {
-            lines = api_get();
-            if (lines == NULL) {
-                continue;
-            }
-        } else {
-            lines = api_update_eta(1);
+    while (!wifi_is_connected()) {
+        vTaskDelay(pdMS_TO_TICKS(50));
+    }
+
+    for (line_name_t l = RED_LINE; l < LINE_COUNT; ++l) {
+        light_line(led_handle, l, api_get(l));
+    }
+    led_strip_refresh(led_handle);
+
+    for (line_name_t line_to_update = RED_LINE;; ++line_to_update, vTaskDelay(pdMS_TO_TICKS(update_interval))) {
+        if (t == 0) {
+            t = esp_timer_get_time();
         }
-
         for (size_t i = 0; i < CTA_NUM_LEDS; ++i) {
-            led_strip_set_pixel(led_handle, i, 0, 0, 0);
+            _led_strip_set_pixel(led_handle, i, 0, 0, 0);
         }
-        for (size_t i = 0; i < LINE_COUNT; ++i) {
-            for (size_t j = 0; j < lines[i].count; ++j) {
-                led_segment_t segment = cta_get_leds(lines[i].trains[j].next_stop, i);
-                if (segment.station == 0) {
-                    continue;
-                }
-                if (lines[i].trains[j].delayed && tick % 2) {
-                    light_stop(led_handle, segment, (color_t) { .r = 1, .g = 0 , .b = 0}, lines[i].trains[j].progress);
-                } else {
-                    light_stop(led_handle, segment, cta_get_led_color(i), lines[i].trains[j].progress);
-                }
-            }
+        if (line_to_update == LINE_COUNT)
+            line_to_update = RED_LINE;
+        line_t line = api_get(line_to_update);
+        light_line(led_handle, line_to_update, line);
+        int64_t now = esp_timer_get_time();
+        uint16_t inc = (now - t) / (1000 * 1000);
+        t = now;
+
+        for (line_name_t l = RED_LINE; l < LINE_COUNT; ++l) {
+            if (l == line_to_update) continue;
+            line_t line = api_update_eta(l, inc);
+            light_line(led_handle, l, line);
         }
 
         led_strip_refresh(led_handle);
@@ -206,7 +267,7 @@ static void random_colors(void* user_data)
                 change_color(&color[i].b);
                 break;
             }
-            led_strip_set_pixel(led_handle, i, color[i].r, color[i].g, color[i].b);
+            _led_strip_set_pixel(led_handle, i, color[i].r, color[i].g, color[i].b);
         }
         led_strip_refresh(led_handle);
     }
@@ -221,11 +282,13 @@ static void arrivals_lcd(void* user_data)
     }
     ui_connecting(true);
     ui_arrivals();
-    int64_t update_interval;
-    config_get_int("lcd_period", &update_interval);
-    TickType_t delay_ticks = pdMS_TO_TICKS(update_interval);
+    int64_t ret;
+    config_get_int("lcd_period", &ret);
+    TickType_t delay_ticks = pdMS_TO_TICKS(ret);
+    config_get_int("station", &ret);
+    const station_id_t station = (station_id_t) ret;
     for (;; vTaskDelay(delay_ticks)) {
-        expected_trains_t trains = api_get_expected(HAROLD_WASHINGTON_LIBRARY_STATE_VAN_BUREN_BROWN_ORANGE_PURPLE_PINK);
+        expected_trains_t trains = api_get_expected(station);
         if (trains.count == 0) continue;
         for (size_t i = 0; i < UI_NUM_ROWS; ++i) {
             if (i < trains.count) {

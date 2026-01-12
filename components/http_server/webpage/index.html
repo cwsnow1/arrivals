@@ -116,7 +116,7 @@
 
             <div class="form-group">
                 <label for="led_mode">LED Mode</label>
-                <select id="led_mode" name="led_mode">
+                <select id="led_mode" name="led_mode" onchange="onLedModeChange()">
                     <option value="0">Off</option>
                     <option value="1">Line Colors</option>
                     <option value="2">Live Tracking</option>
@@ -127,9 +127,36 @@
                 </select>
             </div>
 
-            <div class="form-group">
+            <div class="form-group" id="led_brightness_group" style="display: none; margin-top: 8px;">
+                <label for="led_bright">LED Brightness</label>
+                <select id="led_bright" name="led_bright">
+                    <option value="0">Low</option>
+                    <option value="1">Medium</option>
+                    <option value="2">High</option>
+                </select>
+            </div>
+
+            <div class="form-group" id="led_color_group" style="display: none; margin-top: 8px;">
                 <label for="led_color">LED Color</label>
                 <input type="color" id="led_color" name="led_color" value="#000000">
+            </div>
+
+            <div class="form-group" id="marquee_group" style="display: none; margin-top: 8px;">
+                <label for="m_num_train">Train Count</label>
+                <select id="m_num_train" name="m_num_train">
+                    <option value="0">Low</option>
+                    <option value="1">Medium</option>
+                    <option value="2">High</option>
+                </select>
+                <label for="m_train_len">Train Length</label>
+                <input type="number" id="m_train_len" name="m_train_len">
+                <label for="m_period">Update Period (ms)</label>
+                <input type="number" id="m_period" name="m_period">
+            </div>
+
+            <div class="form-group" id="tracking_group" style="display: none; margin-top: 8px;">
+                <label for="led_period">Update Period (ms)</label>
+                <input type="number" id="led_period" name="led_period">
             </div>
 
             <div class="form-group">
@@ -137,6 +164,25 @@
                 <select id="lcd_mode" name="lcd_mode">
                     <option value="0">Off</option>
                     <option value="1">Arrivals</option>
+                </select>
+            </div>
+
+            <div class="form-group" id="station_group">
+                <label>Line</label>
+                <select id="line_select" onchange="onLineSelect()">
+                    <option value="0">Red</option>
+                    <option value="1">Blue</option>
+                    <option value="2">Green</option>
+                    <option value="3">Brown</option>
+                    <option value="4">Purple</option>
+                    <option value="5">Yellow</option>
+                    <option value="6">Pink</option>
+                    <option value="7">Orange</option>
+                </select>
+                <br>
+                <label>Station</label>
+                <select id="station" name="station">
+                    <option value="">Select a station</option>
                 </select>
             </div>
 
@@ -205,6 +251,50 @@
             }
         }
 
+        function onLedModeChange() {
+            const select = document.getElementById('led_mode');
+            const led_brightness_group = document.getElementById('led_brightness_group');
+            const color_select = document.getElementById('led_color_group');
+            const marquee_group = document.getElementById('marquee_group');
+            const tracking_group = document.getElementById('tracking_group');
+
+            tracking_group.style.display = 'none';
+            color_select.style.display = 'none';
+            marquee_group.style.display = 'none';
+            led_brightness_group.style.display = 'block';
+
+            switch (select.value) {
+                case '0':
+                    led_brightness_group.style.display = 'none';
+                    break;
+                case '2':
+                    tracking_group.style.display = 'block';
+                    break;
+                case '4':
+                    color_select.style.display = 'block';
+                    break;
+                case '5':
+                    marquee_group.style.display = 'block';
+                    break;
+            }
+        }
+
+        async function onLineSelect() {
+            const select = document.getElementById('line_select');
+            const station_select = document.getElementById('station');
+            fetch(`/stations?station=${select.value}`)
+                .then(response => response.json())
+                .then(stations => {
+                    station_select.innerHTML = '';
+                    stations.forEach(station => {
+                        const option = document.createElement('option');
+                        option.value = station.id;
+                        option.textContent = station.name;
+                        station_select.appendChild(option);
+                    })
+                });
+        }
+
         function loadConfig() {
             fetch('/config')
                 .then(response => response.json())
@@ -223,6 +313,19 @@
                         document.getElementById('brightness').value = brightness;
                         document.getElementById('brightness_value').textContent = brightness;
                     }
+                    if (config.m_train_len !== undefined) {
+                        document.getElementById('m_train_len') = config.m_train_len;
+                    }
+                    if (config.m_num_train !== undefined) {
+                        document.getElementById('m_num_train') = config.m_num_train;
+                    }
+                    if (config.led_period !== undefined) {
+                        document.getElementById('led_period') = config.led_period;
+                    }
+                    if (config.led_bright !== undefined) {
+                        document.getElementById('led_bright') = config.led_bright;
+                    }
+                    onLedModeChange();
                     scanNetworks();
                 })
                 .catch(error => {

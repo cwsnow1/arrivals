@@ -34,6 +34,12 @@ typedef enum {
 } led_mode_t;
 
 typedef enum {
+    MARQUEE_TRAIN_COUNT_LOW,
+    MARQUEE_TRAIN_COUNT_MEDIUM,
+    MARQUEE_TRAIN_COUNT_HIGH,
+} marquee_train_count_t;
+
+typedef enum {
     LED_BRIGHTNESS_LOW,
     LED_BRIGHTNESS_MED,
     LED_BRIGHTNESS_HIGH,

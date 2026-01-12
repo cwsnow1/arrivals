@@ -490,6 +490,7 @@ typedef struct {
     station_id_t id;
     location_t location;
     uint16_t led_index[LINE_COUNT];
+    const char* name;
 } station_t;
 
 typedef struct {
@@ -521,3 +522,4 @@ line_name_t cta_get_line_from_name(const char* line_name);
 color_t cta_get_led_color(line_name_t line);
 color_t cta_get_lcd_color(line_name_t line);
 location_t cta_get_station_location(station_id_t station);
+const station_t* cta_get_stations(size_t* station_count);

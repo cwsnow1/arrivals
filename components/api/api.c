@@ -47,28 +47,26 @@ static int timestamp_subtract(const char* arrival_ts)
     return mktime(&t) - time(NULL);
 }
 
-line_t* api_update_eta(uint16_t time_step)
+line_t api_update_eta(line_name_t line, uint16_t time_step)
 {
-    for (line_name_t line = 0; line < LINE_COUNT; ++line) {
-        for (size_t i = 0; i < s_lines[line].count; ++i) {
-            train_t* train = &s_lines[line].trains[i];
-            if (train->progress == 1.0f) continue;
-            if (train->eta > time_step) {
-                train->eta -= time_step;
-            } else {
-                train->eta = 0;
+    for (size_t i = 0; i < s_lines[line].count; ++i) {
+        train_t* train = &s_lines[line].trains[i];
+        if (train->progress == 1.0f) continue;
+        if (train->eta > time_step) {
+            train->eta -= time_step;
+        } else {
+            train->eta = 0;
+        }
+        if (train->original_eta != 0) {
+            float progress = 1.0f - ((float) train->eta / train->original_eta);
+            if (progress > train->progress) {
+                train->progress = progress;
             }
-            if (train->original_eta != 0) {
-                float progress = 1.0f - ((float) train->eta / train->original_eta);
-                if (progress > train->progress) {
-                    train->progress = progress;
-                }
-            } else {
-                train->progress = 1.0f;
-            }
+        } else {
+            train->progress = 1.0f;
         }
     }
-    return s_lines;
+    return s_lines[line];
 }
 
 static void decode(http_response_t r, line_name_t line)
@@ -257,19 +255,17 @@ err:
     return ret;
 }
 
-line_t* api_get(void)
+line_t api_get(line_name_t line)
 {
     if (!wifi_is_connected()) {
         ESP_LOGI(TAG, "WiFi not connected, skipping");
-        return NULL;
+        return (line_t) { 0 };
     }
-    ESP_LOGD(TAG, "Starting requests");
+    ESP_LOGD(TAG, "Starting request");
     char url[128];
-    for (size_t i = 0; i < LINE_COUNT; ++i) {
-        sprintf(url, API_ENDPOINT, line_names[i]);
-        decode(http_get(url), i);
-    }
-    return s_lines;
+    sprintf(url, API_ENDPOINT, line_names[line]);
+    decode(http_get(url), line);
+    return s_lines[line];
 }
 
 expected_trains_t api_get_expected(station_id_t station)

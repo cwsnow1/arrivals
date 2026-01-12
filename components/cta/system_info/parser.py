@@ -142,7 +142,8 @@ with open(script_dir.joinpath('cta.csv')) as csvfile:
                 if l.type == 'station' and l.station == station_name:
                     led_map[l.line] = l.index
                     station_led_map[l.line][station_name] = l.index
-        print(f'{{ .id = {station_id}, .location = {{ {lat}f, {lon}f }}, .led_index = {{ ', end='')
+        station_name_fixed = station_name[:station_name.index(' (')]
+        print(f'{{ .id = {station_id}, .name = \"{station_name_fixed}\" .location = {{ {lat}f, {lon}f }}, .led_index = {{ ', end='')
         for line_index, index in led_map.items():
             print(f'[{line_index}] = {index}', end=', ')
         print('}},')

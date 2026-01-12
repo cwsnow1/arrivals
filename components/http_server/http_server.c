@@ -16,6 +16,7 @@
 #include "http_server.h"
 #include "wifi.h"
 #include "json_parser.h"
+#include "cta.h"
 
 extern uint8_t index_html[];
 extern size_t index_html_size;
@@ -85,6 +86,7 @@ static esp_err_t config_post_handler(httpd_req_t* req)
     }
     httpd_req_recv(req, message_buffer, req->content_len);
     message_buffer[req->content_len] = '\0';
+    printf("%s\n", message_buffer);
 
     jparse_ctx_t ctx;
     if (json_parse_start(&ctx, message_buffer, req->content_len) != OS_SUCCESS) {
@@ -262,7 +264,43 @@ static esp_err_t scan_wifi_post_handler(httpd_req_t *req)
 static esp_err_t reboot_post_handler(httpd_req_t *req)
 {
     httpd_resp_send(req, NULL, 0);
+    vTaskDelay(pdMS_TO_TICKS(250));
     esp_restart();
+    return ESP_OK;
+}
+
+static esp_err_t stations_get_handler(httpd_req_t* req)
+{
+    char buffer[32];
+    char val_buffer[32];
+    httpd_req_get_url_query_str(req, buffer, sizeof buffer);
+    if (httpd_query_key_value(buffer, "station", val_buffer, sizeof val_buffer) != ESP_OK) {
+        httpd_resp_set_status(req, HTTPD_400);
+        httpd_resp_send(req, "Please provide the station index", HTTPD_RESP_USE_STRLEN);
+        return ESP_OK;
+    }
+    int index = strtol(val_buffer, NULL, 10);
+    if (index >= LINE_COUNT || index < 0) {
+        httpd_resp_set_status(req, HTTPD_400);
+        httpd_resp_send(req, "Invalid station index", HTTPD_RESP_USE_STRLEN);
+        return ESP_OK;
+    }
+
+    size_t station_count;
+    const station_t* stations = cta_get_stations(&station_count);
+    string_t json;
+    init_string(&json);
+    APPEND_STRING_NO_ARGS(json, "[");
+    for (size_t i = 0; i < station_count; ++i) {
+        if (stations[i].led_index[index]) {
+            APPEND_STRING(json, "{\"id\":%d,\"name\":\"%s\"},", stations[i].id, stations[i].name);
+        }
+    }
+    json.buffer[json.length - 1] = ']';
+    httpd_resp_set_type(req, "application/json");
+    httpd_resp_send(req, json.buffer, json.length);
+    free(json.buffer);
+    return ESP_OK;
 }
 
 static const httpd_uri_t scan = {
@@ -300,6 +338,13 @@ static const httpd_uri_t reboot = {
     .user_ctx  = NULL,
 };
 
+static const httpd_uri_t stations_endpoint = {
+    .uri       = "/stations",
+    .method    = HTTP_GET,
+    .handler   = stations_get_handler,
+    .user_ctx  = NULL,
+};
+
 // HTTP Error (404) Handler - Redirects all requests to the root page
 esp_err_t http_404_error_handler(httpd_req_t *req, httpd_err_code_t err)
 {
@@ -332,6 +377,7 @@ void http_server_start(void)
         httpd_register_uri_handler(server, &config_endpoint);
         httpd_register_uri_handler(server, &config_get_endpoint);
         httpd_register_uri_handler(server, &reboot);
+        httpd_register_uri_handler(server, &stations_endpoint);
         httpd_register_err_handler(server, HTTPD_404_NOT_FOUND, http_404_error_handler);
         return;
     }
