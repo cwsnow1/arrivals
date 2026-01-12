@@ -1,7 +1,7 @@
 on:
   push:
     branches:
-    - 'release/**'
+      - 'release/**'
   workflow_dispatch:
 
 name: Publish Release
@@ -20,7 +20,7 @@ jobs:
           ref: release/v6.0
           fetch-depth: 1
           path: esp
-      - name: Checkout
+      - name: Checkout main repository
         uses: actions/checkout@v4
         with:
           path: main
@@ -37,22 +37,26 @@ jobs:
           . $GITHUB_WORKSPACE/esp/export.sh
           idf.py set-target esp32s3
           idf.py build
+
+      - name: Extract tag name from branch
+        run: |
+          TAG_NAME="${GITHUB_REF#refs/heads/}"
+          echo "TAG_NAME=${TAG_NAME//\//-}" >> $GITHUB_ENV
+          echo "RELEASE_NAME=${TAG_NAME//\//-}" >> $GITHUB_ENV
+      
+      - name: List build artifacts
+        run: |
+          echo "Build directory contents:"
+          find $GITHUB_WORKSPACE/main/build -name "*.bin" -o -name "*.elf" -o -name "*.map" | head -20
+
       - name: Create Release
-        id: create_release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        uses: softprops/action-gh-release@v1
         with:
-          tag_name: ${{ github.ref }}
-          release_name: Release ${{ github.ref }}
+          tag_name: ${{ env.TAG_NAME }}
+          name: Release ${{ env.RELEASE_NAME }}
           draft: false
           prerelease: false
-      - name: Upload Release Assets
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: $GITHUB_WORKSPACE/main/build/arrivals.bin
-          asset_name: arrivals.bin
-          asset_content_type: application/octet-stream
+          files: |
+            ${{ github.workspace }}/main/build/*.bin
+            ${{ github.workspace }}/main/build/*.elf
+          generate_release_notes: true
