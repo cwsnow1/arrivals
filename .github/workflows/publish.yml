@@ -5,6 +5,8 @@ on:
   workflow_dispatch:
 
 name: Publish Release
+permissions:
+  contents: write
 
 jobs:
   build:
