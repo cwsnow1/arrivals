@@ -1,0 +1,56 @@
+on:
+  push:
+    branches:
+    - release/*
+  workflow_dispatch:
+
+name: Publish Release
+
+jobs:
+  build:
+    name: Publish Release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout ESP-IDF
+        uses: actions/checkout@v4
+        with:
+          repository: espressif/esp-idf
+          ref: release/v6.0
+          fetch-depth: 1
+          path: esp
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          path: main
+          submodules: 'recursive'
+
+      - name: Install esp-idf
+        run: |
+          cd esp
+          git submodule update --init --recursive --depth=1
+          ./install.sh esp32s3
+      - name: Build
+        run: |
+          cd $GITHUB_WORKSPACE/main
+          . $GITHUB_WORKSPACE/esp/export.sh
+          idf.py set-target esp32s3
+          idf.py build
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: Release ${{ github.ref }}
+          draft: false
+          prerelease: false
+      - name: Upload Release Assets
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: $GITHUB_WORKSPACE/main/build/arrivals.bin
+          asset_name: arrivals.bin
+          asset_content_type: application/octet-stream
