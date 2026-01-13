@@ -1,0 +1,5 @@
+menu "Project config"
+    config OTA_URL
+    string "OTA Firmware URL"
+    default "https://github.com/cwsnow1/arrivals/releases/latest/download/arrivals.bin"
+endmenu

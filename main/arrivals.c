@@ -19,6 +19,7 @@
 #include "cta.h"
 #include "display.h"
 #include "http_server.h"
+#include "http_client.h"
 #include "ui.h"
 #include "wifi.h"
 
@@ -28,6 +29,16 @@
 #endif
 
 static const char* TAG = "main";
+
+static void firmware_update_task(void*)
+{
+    int64_t autoupdate = 0;
+    for (;; vTaskDelay(pdMS_TO_TICKS(60 * 60 * 1000))) {
+        config_get_int("autoupdate", &autoupdate);
+        if (autoupdate)
+            http_firmware_upgrade();
+    }
+}
 
 static void sync_time(void)
 {
@@ -434,5 +445,6 @@ void app_main(void)
         }
         http_server_start();
         sync_time();
+        xTaskCreate(firmware_update_task, "firmware_update_task", 8192, NULL, tskIDLE_PRIORITY, NULL);
     }
 }

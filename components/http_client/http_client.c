@@ -1,8 +1,11 @@
+#include "esp_crt_bundle.h"
 #include "esp_http_client.h"
+#include "esp_https_ota.h"
 #include "esp_log.h"
 
-#include "wifi.h"
+#include "config.h"
 #include "http_client.h"
+#include "wifi.h"
 
 static const char* TAG = "http_client";
 
@@ -94,4 +97,46 @@ void http_close(void)
         esp_http_client_cleanup(s_client);
         s_client = NULL;
     }
+}
+
+void http_firmware_upgrade(void)
+{
+    char* firmware_url = config_get_string("ota_url");
+    esp_http_client_config_t config = {
+        .url = firmware_url,
+        .crt_bundle_attach = esp_crt_bundle_attach,
+        .buffer_size = 16 * 1024,
+        .buffer_size_tx = 16 * 1024,
+    };
+    printf("free heap %zu\n", heap_caps_get_free_size(MALLOC_CAP_DEFAULT));
+    esp_https_ota_config_t ota_config = {
+        .http_config = &config,
+        .partial_http_download = true,
+        .max_http_request_size = 16384,
+    };
+
+    esp_https_ota_handle_t handle;
+    esp_err_t err = esp_https_ota_begin(&ota_config, &handle);
+    if (err != ESP_OK) goto error;
+    esp_app_desc_t new_app_info;
+    err = esp_https_ota_get_img_desc(handle, &new_app_info);
+    if (err != ESP_OK) goto error;
+    const esp_app_desc_t* app_info = esp_app_get_description();
+    if (!strcmp(app_info->version, new_app_info.version)) {
+        ESP_LOGI(TAG, "FW versions are not different");
+        goto cleanup;
+    }
+    ESP_LOGI(TAG, "New app version: %s", new_app_info.version);
+    do {
+        err = esp_https_ota_perform(handle);
+    } while (err == ESP_ERR_HTTPS_OTA_IN_PROGRESS);
+    if (err == ESP_OK) {
+        esp_https_ota_finish(handle);
+        esp_restart();
+    }
+error:
+    ESP_LOGE(TAG, "OTA failed for some reason: %d", (int) err);
+cleanup:
+    free(firmware_url);
+    esp_https_ota_abort(handle);
 }

@@ -192,6 +192,16 @@
                     oninput="document.getElementById('brightness_value').textContent = this.value">
             </div>
 
+            <div class="form-group">
+                <label>Auto-update Firmware</label>
+                <select id="autoupdate" name="autoupdate">
+                    <option value="0">Off</option>
+                    <option value="1">On</option>
+                </select>
+                <label>Firmware Location</label>
+                <input type="text" id="ota_url" name="ota_url">
+            </div>
+
             <div class="button-group">
                 <button type="button" class="save" onclick="saveConfig()">Save Config</button>
                 <button type="button" class="reboot" onclick="rebootDevice()">Reboot</button>
@@ -314,16 +324,22 @@
                         document.getElementById('brightness_value').textContent = brightness;
                     }
                     if (config.m_train_len !== undefined) {
-                        document.getElementById('m_train_len') = config.m_train_len;
+                        document.getElementById('m_train_len').value = config.m_train_len;
                     }
                     if (config.m_num_train !== undefined) {
-                        document.getElementById('m_num_train') = config.m_num_train;
+                        document.getElementById('m_num_train').value = config.m_num_train;
                     }
                     if (config.led_period !== undefined) {
-                        document.getElementById('led_period') = config.led_period;
+                        document.getElementById('led_period').value = config.led_period;
                     }
                     if (config.led_bright !== undefined) {
-                        document.getElementById('led_bright') = config.led_bright;
+                        document.getElementById('led_bright').value = config.led_bright;
+                    }
+                    if (config.ota_url !== undefined) {
+                        document.getElementById('ota_url').value = config.ota_url;
+                    }
+                    if (config.autoupdate !== undefined) {
+                        document.getElementById('autoupdate').value = config.autoupdate;
                     }
                     onLedModeChange();
                     scanNetworks();

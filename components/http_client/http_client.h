@@ -15,6 +15,7 @@ typedef struct {
 http_response_t http_get(const char* url);
 http_response_t http_get_and_keep_open(const char* url);
 void http_close(void);
+void http_firmware_upgrade(void);
 
 #ifdef __cplusplus
 }
