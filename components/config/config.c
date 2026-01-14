@@ -25,6 +25,7 @@ static const config_param_t s_params[] = {
     { .key = "ap",          .type = CONFIG_TYPE_INT,    .default_val = { .i = 1 } },
     { .key = "api_key",     .type = CONFIG_TYPE_STRING, .default_val = { .s = CONFIG_API_KEY }},
     { .key = "station",     .type = CONFIG_TYPE_INT,    .default_val = { .i = 40380 }},
+    { .key = "station_line",.type = CONFIG_TYPE_INT,    .default_val = { .i = 1 }},
     { .key = "m_num_train", .type = CONFIG_TYPE_INT,    .default_val = { .i = MARQUEE_TRAIN_COUNT_LOW }},
     { .key = "m_train_len", .type = CONFIG_TYPE_INT,    .default_val = { .i = 2 }},
     { .key = "m_period",    .type = CONFIG_TYPE_INT,    .default_val = { .i = 50 }},

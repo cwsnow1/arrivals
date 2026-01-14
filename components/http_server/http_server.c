@@ -86,7 +86,6 @@ static esp_err_t config_post_handler(httpd_req_t* req)
     }
     httpd_req_recv(req, message_buffer, req->content_len);
     message_buffer[req->content_len] = '\0';
-    printf("%s\n", message_buffer);
 
     jparse_ctx_t ctx;
     if (json_parse_start(&ctx, message_buffer, req->content_len) != OS_SUCCESS) {
@@ -102,6 +101,7 @@ static esp_err_t config_post_handler(httpd_req_t* req)
         char buffer[64];
         if (params[i].type == CONFIG_TYPE_STRING) {
             if (json_obj_get_string(&ctx, params[i].key, buffer, sizeof buffer) == OS_SUCCESS) {
+                if (strlen(buffer) == 0) continue;
                 config_set_string(params[i].key, buffer);
                 if (params[i].update_cb) {
                     params[i].update_cb(buffer);
@@ -113,6 +113,7 @@ static esp_err_t config_post_handler(httpd_req_t* req)
                 if (json_obj_get_string(&ctx, params[i].key, buffer, sizeof buffer) != OS_SUCCESS) {
                     continue;
                 }
+                if (strlen(buffer) == 0) continue;
                 val = strtoll(buffer, NULL, 10);
             }
             config_set_int(params[i].key, val);

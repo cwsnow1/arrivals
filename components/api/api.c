@@ -6,13 +6,14 @@
 #include "json_parser.h"
 
 #include "api.h"
+#include "config.h"
 #include "http_client.h"
 #include "wifi.h"
 
 static const char* TAG = "api";
 
-#define API_ENDPOINT "http://lapi.transitchicago.com/api/1.0/ttpositions.aspx?rt=%s&outputType=JSON&key=" CONFIG_API_KEY
-#define STATION_ENDPOINT "http://lapi.transitchicago.com/api/1.0/ttarrivals.aspx?mapid=%d&max=3&outputType=JSON&key=" CONFIG_API_KEY
+#define API_ENDPOINT "http://lapi.transitchicago.com/api/1.0/ttpositions.aspx?rt=%s&outputType=JSON&key=%s"
+#define STATION_ENDPOINT "http://lapi.transitchicago.com/api/1.0/ttarrivals.aspx?mapid=%d&max=3&outputType=JSON&key=%s"
 #define DIST_THRESHOLD (0.001f)
 
 static const char* line_names[] = {
@@ -30,6 +31,7 @@ static line_t s_lines[LINE_COUNT];
 
 static expected_train_t trains[3];
 static char station_name_buffer[128];
+static char* s_api_key = NULL;
 
 static int timestamp_subtract(const char* arrival_ts)
 {
@@ -261,9 +263,12 @@ line_t api_get(line_name_t line)
         ESP_LOGI(TAG, "WiFi not connected, skipping");
         return (line_t) { 0 };
     }
+    if (!s_api_key) {
+        s_api_key = config_get_string("api_key");
+    }
     ESP_LOGD(TAG, "Starting request");
     char url[128];
-    sprintf(url, API_ENDPOINT, line_names[line]);
+    sprintf(url, API_ENDPOINT, line_names[line], s_api_key);
     decode(http_get(url), line);
     return s_lines[line];
 }
@@ -271,7 +276,10 @@ line_t api_get(line_name_t line)
 expected_trains_t api_get_expected(station_id_t station)
 {
     char url[128];
-    sprintf(url, STATION_ENDPOINT, station);
+    if (!s_api_key) {
+        s_api_key = config_get_string("api_key");
+    }
+    sprintf(url, STATION_ENDPOINT, station, s_api_key);
     http_response_t resp = http_get(url);
     return decode_arrivals(resp);
 }

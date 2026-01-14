@@ -14,4 +14,5 @@ idf_component_register(
              http_server
              http_client
              esp_timer
+             app_update
 )

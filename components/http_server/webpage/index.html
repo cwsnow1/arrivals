@@ -115,6 +115,11 @@
             </div>
 
             <div class="form-group">
+                <label for="api_key">CTA API Key</label>
+                <input type="text" id="api_key" name="api_key" style="margin-top: 8px;">
+            </div>
+
+            <div class="form-group">
                 <label for="led_mode">LED Mode</label>
                 <select id="led_mode" name="led_mode" onchange="onLedModeChange()">
                     <option value="0">Off</option>
@@ -169,7 +174,7 @@
 
             <div class="form-group" id="station_group">
                 <label>Line</label>
-                <select id="line_select" onchange="onLineSelect()">
+                <select id="station_line" name="station_line" onchange="onLineSelect()">
                     <option value="0">Red</option>
                     <option value="1">Blue</option>
                     <option value="2">Green</option>
@@ -289,18 +294,24 @@
             }
         }
 
-        async function onLineSelect() {
-            const select = document.getElementById('line_select');
+        async function onLineSelect(station_id) {
+            const select = document.getElementById('station_line');
             const station_select = document.getElementById('station');
+            console.log(`Fetching stations for line ${select.value}`);
             fetch(`/stations?station=${select.value}`)
                 .then(response => response.json())
                 .then(stations => {
+                    console.log(stations);
+                    console.log(station_id);
                     station_select.innerHTML = '';
                     stations.forEach(station => {
                         const option = document.createElement('option');
                         option.value = station.id;
                         option.textContent = station.name;
                         station_select.appendChild(option);
+                        if (station_id !== undefined) {
+                            station_select.value = station_id;
+                        }
                     })
                 });
         }
@@ -341,8 +352,17 @@
                     if (config.autoupdate !== undefined) {
                         document.getElementById('autoupdate').value = config.autoupdate;
                     }
-                    onLedModeChange();
+                    if (config.station_line !== undefined) {
+                        document.getElementById('station_line').value = config.station_line;
+                        onLineSelect(config.station);
+                    }
+                    if (config.api_key !== undefined) {
+                        document.getElementById('api_key').value = config.api_key;
+                    }
                     scanNetworks();
+                })
+                .then(() => {
+                    onLedModeChange();
                 })
                 .catch(error => {
                     console.error('Failed to load config:', error);

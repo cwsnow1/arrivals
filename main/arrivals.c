@@ -10,6 +10,7 @@
 #include "esp_heap_caps.h"
 #include "esp_log.h"
 #include "esp_netif_sntp.h"
+#include "esp_ota_ops.h"
 #include "esp_timer.h"
 #include "led_strip.h"
 #include "nvs_flash.h"
@@ -447,4 +448,6 @@ void app_main(void)
         sync_time();
         xTaskCreate(firmware_update_task, "firmware_update_task", 8192, NULL, tskIDLE_PRIORITY, NULL);
     }
+    vTaskDelay(pdMS_TO_TICKS(5000));
+    esp_ota_mark_app_valid_cancel_rollback();
 }
