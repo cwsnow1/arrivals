@@ -177,10 +177,11 @@ static void solid_color(void* user_data)
     }
 }
 
-static void light_line(led_strip_handle_t led_handle, line_name_t line_index, line_t line)
+static void light_line(led_strip_handle_t led_handle, line_name_t line_index, line_t line, bool update_delay)
 {
     static bool delay_flag[LINE_COUNT];
-    delay_flag[line_index] = !delay_flag[line_index];
+    if (update_delay)
+        delay_flag[line_index] = !delay_flag[line_index];
     for (size_t j = 0; j < line.count; ++j) {
         led_segment_t segment = cta_get_leds(line.trains[j].next_stop, line_index);
         if (segment.station == 0) {
@@ -210,7 +211,7 @@ static void update_lines_task(void* user_data)
         t = now;
         for (line_name_t l = 0; l < LINE_COUNT; ++l) {
             line_t line = api_update_eta(l, inc);
-            light_line(led_handle, l, line);
+            light_line(led_handle, l, line, true);
         }
         led_strip_refresh(led_handle);
         _lock_release(&tracking_lock);
@@ -231,12 +232,13 @@ static void live_tracking(void* user_data)
     }
 
     for (line_name_t l = RED_LINE; l < LINE_COUNT; ++l) {
-        light_line(led_handle, l, api_get(l));
+        light_line(led_handle, l, api_get(l), true);
     }
     led_strip_refresh(led_handle);
 
     xTaskCreate(update_lines_task, "update_lines_task", 4096, led_handle, 4, NULL);
 
+    int64_t t = esp_timer_get_time();
     for (line_name_t line_to_update = RED_LINE;; ++line_to_update, vTaskDelay(pdMS_TO_TICKS(update_interval))) {
         _lock_acquire(&tracking_lock);
         for (size_t i = 0; i < CTA_NUM_LEDS; ++i) {
@@ -245,7 +247,15 @@ static void live_tracking(void* user_data)
         if (line_to_update == LINE_COUNT)
             line_to_update = RED_LINE;
         line_t line = api_get(line_to_update);
-        light_line(led_handle, line_to_update, line);
+        light_line(led_handle, line_to_update, line, false);
+        int64_t now = esp_timer_get_time();
+        uint16_t inc = (uint16_t) ((now - t) / 1000);
+        t = now;
+        for (line_name_t l = 0; l < LINE_COUNT; ++l) {
+            if (l == line_to_update) continue;
+            line_t line = api_update_eta(l, inc);
+            light_line(led_handle, l, line,false);
+        }
 
         led_strip_refresh(led_handle);
         _lock_release(&tracking_lock);
