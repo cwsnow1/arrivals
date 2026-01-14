@@ -108,7 +108,7 @@ void http_firmware_upgrade(void)
         .buffer_size = 16 * 1024,
         .buffer_size_tx = 16 * 1024,
     };
-    printf("free heap %zu\n", heap_caps_get_free_size(MALLOC_CAP_DEFAULT));
+
     esp_https_ota_config_t ota_config = {
         .http_config = &config,
         .partial_http_download = true,
