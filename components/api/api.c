@@ -14,7 +14,7 @@ static const char* TAG = "api";
 
 #define API_ENDPOINT "http://lapi.transitchicago.com/api/1.0/ttpositions.aspx?rt=%s&outputType=JSON&key=%s"
 #define STATION_ENDPOINT "http://lapi.transitchicago.com/api/1.0/ttarrivals.aspx?mapid=%d&max=3&outputType=JSON&key=%s"
-#define DIST_THRESHOLD (0.001f)
+#define DIST_THRESHOLD (0.002f)
 
 static const char* line_names[] = {
     [RED_LINE] = "red",
@@ -49,18 +49,18 @@ static int timestamp_subtract(const char* arrival_ts)
     return mktime(&t) - time(NULL);
 }
 
-line_t api_update_eta(line_name_t line, uint16_t time_step)
+line_t api_update_eta(line_name_t line, uint16_t time_step_ms)
 {
     for (size_t i = 0; i < s_lines[line].count; ++i) {
         train_t* train = &s_lines[line].trains[i];
         if (train->progress == 1.0f) continue;
-        if (train->eta > time_step) {
-            train->eta -= time_step;
+        if (train->eta_ms > time_step_ms) {
+            train->eta_ms -= time_step_ms;
         } else {
-            train->eta = 0;
+            train->eta_ms = 0;
         }
         if (train->original_eta != 0) {
-            float progress = 1.0f - ((float) train->eta / train->original_eta);
+            float progress = 1.0f - ((float) train->eta_ms / (train->original_eta * 1000));
             if (progress > train->progress) {
                 train->progress = progress;
             }
@@ -151,7 +151,7 @@ static void decode(http_response_t r, line_name_t line)
                     train->progress = 1.0f;
                 }
             }
-            train->eta = eta;
+            train->eta_ms = eta * 1000;
             train->next_stop = next_stop;
 
             json_obj_get_string(&ctx, "isApp", buffer, sizeof buffer);

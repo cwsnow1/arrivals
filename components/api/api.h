@@ -9,8 +9,8 @@ extern "C" {
 typedef struct {
     float progress;
     stop_id_t next_stop;
+    uint32_t eta_ms;
     uint16_t rn;
-    uint16_t eta;
     uint16_t original_eta;
     uint8_t arr     : 1;
     uint8_t delayed : 1;

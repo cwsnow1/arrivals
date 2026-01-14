@@ -185,7 +185,8 @@ static esp_err_t config_get_handler(httpd_req_t* req)
         if (!strcmp(params[i].key, "password")) continue;
         if (params[i].type == CONFIG_TYPE_STRING) {
             char* val = config_get_string(params[i].key);
-            APPEND_STRING(json, "\"%s\":\"%s\",", params[i].key, val);
+            if (val)
+                APPEND_STRING(json, "\"%s\":\"%s\",", params[i].key, val);
             free(val);
         } else {
             int64_t val = 0;

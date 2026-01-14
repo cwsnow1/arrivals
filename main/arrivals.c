@@ -194,14 +194,37 @@ static void light_line(led_strip_handle_t led_handle, line_name_t line_index, li
     }
 }
 
+static _lock_t tracking_lock;
+
+static void update_lines_task(void* user_data)
+{
+    led_strip_handle_t led_handle = (led_strip_handle_t) user_data;
+    int64_t t = esp_timer_get_time();
+    for (;; vTaskDelay(pdMS_TO_TICKS(500))) {
+        _lock_acquire(&tracking_lock);
+        for (size_t i = 0; i < CTA_NUM_LEDS; ++i) {
+            _led_strip_set_pixel(led_handle, i, 0, 0, 0);
+        }
+        int64_t now = esp_timer_get_time();
+        uint16_t inc = (uint16_t)((esp_timer_get_time() - t) / 1000);
+        t = now;
+        for (line_name_t l = 0; l < LINE_COUNT; ++l) {
+            line_t line = api_update_eta(l, inc);
+            light_line(led_handle, l, line);
+        }
+        led_strip_refresh(led_handle);
+        _lock_release(&tracking_lock);
+    }
+}
+
 static void live_tracking(void* user_data)
 {
     ESP_LOGI(TAG, "Live tracking task entered");
     led_strip_handle_t led_handle = (led_strip_handle_t) user_data;
+    _lock_init(&tracking_lock);
 
     int64_t update_interval;
     config_get_int("led_period", &update_interval);
-    int64_t t = 0;
 
     while (!wifi_is_connected()) {
         vTaskDelay(pdMS_TO_TICKS(50));
@@ -212,10 +235,10 @@ static void live_tracking(void* user_data)
     }
     led_strip_refresh(led_handle);
 
+    xTaskCreate(update_lines_task, "update_lines_task", 4096, led_handle, 4, NULL);
+
     for (line_name_t line_to_update = RED_LINE;; ++line_to_update, vTaskDelay(pdMS_TO_TICKS(update_interval))) {
-        if (t == 0) {
-            t = esp_timer_get_time();
-        }
+        _lock_acquire(&tracking_lock);
         for (size_t i = 0; i < CTA_NUM_LEDS; ++i) {
             _led_strip_set_pixel(led_handle, i, 0, 0, 0);
         }
@@ -223,17 +246,9 @@ static void live_tracking(void* user_data)
             line_to_update = RED_LINE;
         line_t line = api_get(line_to_update);
         light_line(led_handle, line_to_update, line);
-        int64_t now = esp_timer_get_time();
-        uint16_t inc = (now - t) / (1000 * 1000);
-        t = now;
-
-        for (line_name_t l = RED_LINE; l < LINE_COUNT; ++l) {
-            if (l == line_to_update) continue;
-            line_t line = api_update_eta(l, inc);
-            light_line(led_handle, l, line);
-        }
 
         led_strip_refresh(led_handle);
+        _lock_release(&tracking_lock);
     }
 }
 

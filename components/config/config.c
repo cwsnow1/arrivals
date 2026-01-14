@@ -16,8 +16,8 @@ static nvs_handle_t s_handle;
 static void update_brightness(void*);
 
 static const config_param_t s_params[] = {
-    { .key = "ssid",        .type = CONFIG_TYPE_STRING },
-    { .key = "password",    .type = CONFIG_TYPE_STRING },
+    { .key = "ssid",        .type = CONFIG_TYPE_STRING, .default_val = { .s = "" } },
+    { .key = "password",    .type = CONFIG_TYPE_STRING, .default_val = { .s = "" } },
     { .key = "led_mode",    .type = CONFIG_TYPE_INT,    .default_val = { .i = LED_MODE_LINE_COLORS } },
     { .key = "led_bright",  .type = CONFIG_TYPE_INT,    .default_val = { .i = 0 }},
     { .key = "lcd_mode",    .type = CONFIG_TYPE_INT,    .default_val = { .i = LED_BRIGHTNESS_LOW } },
