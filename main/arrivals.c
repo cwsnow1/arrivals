@@ -462,12 +462,14 @@ void app_main(void)
         config_get_int("lcd_mode", &lcd_mode);
         if (lcd_mode == LCD_MODE_ARRIVALS) {
             xTaskCreate(arrivals_lcd, "lcd_task", 8192, NULL, 4, NULL);
-        } else if (lcd_mode == LCD_MODE_OFF) {
-            display_set_brightness(0, 0);
         }
         wifi_connect(ssid, password);
         while (!wifi_is_connected()) {
             vTaskDelay(pdMS_TO_TICKS(100));
+        }
+        if (lcd_mode == LCD_MODE_OFF) {
+            ui_connecting(true);
+            display_set_brightness(0, 5000);
         }
         http_server_start();
         sync_time();
