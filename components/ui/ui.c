@@ -71,7 +71,8 @@ void ui_connecting(bool connected)
     s_lock(true);
 
     if (connected) {
-        lv_obj_delete(lbl);
+        if (lbl)
+            lv_obj_delete(lbl);
         lv_obj_t* msg = lv_msgbox_create(NULL);
         lv_obj_set_style_text_font(msg, &arimo_32, 0);
         lv_msgbox_add_text(msg, ui_get_sta_ip_address());
