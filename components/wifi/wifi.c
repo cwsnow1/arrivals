@@ -12,8 +12,8 @@
 #include "wifi.h"
 #include "http_server.h"
 
-#define WIFI_AP_SSID    "TestAP"
-#define WIFI_AP_PASSWD  "abc12356"
+#define WIFI_AP_SSID    "Train_Tracker_PCB"
+#define WIFI_AP_PASSWD  "abc12345"
 #define WIFI_AP_CHANNEL 1
 #define MAX_STA_CONN    2
 

@@ -31,6 +31,69 @@
 
 static const char* TAG = "main";
 
+static _lock_t tracking_lock;
+static TaskHandle_t lcd_task;
+
+time_t get_time_today(const char* key)
+{
+    int hour, min;
+    char* time_s = config_get_string(key);
+    sscanf(time_s, "%02d:%02d", &hour, &min);
+    free(time_s);
+
+    time_t now = time(NULL);
+    struct tm tm;
+    localtime_r(&now, &tm);
+    tm.tm_hour = hour;
+    tm.tm_min = min;
+    return mktime(&tm);
+}
+
+static bool is_quiet_time(void)
+{
+    time_t wakeup_time = get_time_today("wakeup_time");
+    time_t quiet_time = get_time_today("quiet_time");
+    time_t now = time(NULL);
+
+    if (quiet_time > wakeup_time) {
+        if (now > wakeup_time && now < quiet_time) {
+            return false;
+        }
+        return true;
+    }
+    if (now > quiet_time && now < wakeup_time) {
+        return true;
+    }
+    return false;
+}
+
+static void quiet(led_strip_handle_t led_handle)
+{
+    ESP_LOGI(TAG, "Going into quiet mode");
+    if (lcd_task)
+        vTaskDelete(lcd_task);
+    display_set_brightness(0, 500);
+    display_sleep();
+    _lock_acquire(&tracking_lock);
+    led_strip_clear(led_handle);
+    for (;;) {
+        vTaskDelay(pdMS_TO_TICKS(30 * 1000));
+        if (!is_quiet_time()) {
+            esp_restart();
+        }
+    }
+}
+
+static void quiet_time_monitor(void* user_data)
+{
+    led_strip_handle_t led_handle = (led_strip_handle_t) user_data;
+    for (;; vTaskDelay(pdMS_TO_TICKS(30 * 1000))) {
+        if (is_quiet_time()) {
+            quiet(led_handle);
+        }
+    }
+}
+
 static void firmware_update_task(void*)
 {
     int64_t autoupdate = 0;
@@ -194,8 +257,6 @@ static void light_line(led_strip_handle_t led_handle, line_name_t line_index, li
         }
     }
 }
-
-static _lock_t tracking_lock;
 
 static void update_lines_task(void* user_data)
 {
@@ -452,7 +513,6 @@ void app_main(void)
     char* ssid = config_get_string("ssid");
     char* password = config_get_string("password");
     if (ssid == NULL || ap) {
-        printf("ssid=%p, ap=%lld\n", ssid, ap);
         wifi_init_softap();
         http_server_start();
         display_set_brightness(255, 500);
@@ -461,7 +521,7 @@ void app_main(void)
         int64_t lcd_mode;
         config_get_int("lcd_mode", &lcd_mode);
         if (lcd_mode == LCD_MODE_ARRIVALS) {
-            xTaskCreate(arrivals_lcd, "lcd_task", 8192, NULL, 4, NULL);
+            xTaskCreate(arrivals_lcd, "lcd_task", 8192, NULL, 4, &lcd_task);
         }
         wifi_connect(ssid, password);
         while (!wifi_is_connected()) {
@@ -474,6 +534,7 @@ void app_main(void)
         http_server_start();
         sync_time();
         xTaskCreate(firmware_update_task, "firmware_update_task", 8192, NULL, tskIDLE_PRIORITY, NULL);
+        xTaskCreate(quiet_time_monitor, "quiet_time_monitor", 8192, led_handle, tskIDLE_PRIORITY, NULL);
     }
     vTaskDelay(pdMS_TO_TICKS(5000));
     esp_ota_mark_app_valid_cancel_rollback();

@@ -33,6 +33,8 @@ static const config_param_t s_params[] = {
     { .key = "led_period",  .type = CONFIG_TYPE_INT,    .default_val = { .i = 4000 }},
     { .key = "autoupdate",  .type = CONFIG_TYPE_INT,    .default_val = { .i = 1 }},
     { .key = "ota_url",     .type = CONFIG_TYPE_STRING, .default_val = { .s = CONFIG_OTA_URL }},
+    { .key = "quiet_time",  .type = CONFIG_TYPE_STRING, .default_val = { .s = "22:00" }},
+    { .key = "wakeup_time", .type = CONFIG_TYPE_STRING, .default_val = { .s = "06:00 "}},
 };
 
 static int get_param_index(const char* key)

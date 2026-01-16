@@ -37,22 +37,22 @@ void ui_ip(void)
     lbl = lv_label_create(lv_screen_active());
     lv_label_set_text(lbl, "To configure:");
     lv_obj_align(lbl, LV_ALIGN_TOP_MID, 0, 10);
-    lv_obj_set_style_text_font(lbl, &arimo_32, 0);
+    lv_obj_set_style_text_font(lbl, &arimo_24, 0);
 
     lbl = lv_label_create(lv_screen_active());
     lv_label_set_text_fmt(lbl, "SSID: %s", ssid);
     lv_obj_align(lbl, LV_ALIGN_TOP_MID, 0, 50);
-    lv_obj_set_style_text_font(lbl, &arimo_32, 0);
+    lv_obj_set_style_text_font(lbl, &arimo_24, 0);
 
     lbl = lv_label_create(lv_screen_active());
     lv_label_set_text_fmt(lbl, "Pass: %s", password);
     lv_obj_align(lbl, LV_ALIGN_TOP_MID, 0, 90);
-    lv_obj_set_style_text_font(lbl, &arimo_32, 0);
+    lv_obj_set_style_text_font(lbl, &arimo_24, 0);
 
     lbl = lv_label_create(lv_screen_active());
     lv_label_set_text_fmt(lbl, "%s", ip_address);
     lv_obj_align(lbl, LV_ALIGN_TOP_MID, 0, 130);
-    lv_obj_set_style_text_font(lbl, &arimo_32, 0);
+    lv_obj_set_style_text_font(lbl, &arimo_24, 0);
 
     s_lock(false);
 }
