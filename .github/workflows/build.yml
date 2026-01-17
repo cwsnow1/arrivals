@@ -1,0 +1,51 @@
+on:
+  push:
+    branches:
+      - 'main'
+  workflow_dispatch:
+
+name: Build Firmware
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Publish Release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout ESP-IDF
+        uses: actions/checkout@v4
+        with:
+          repository: espressif/esp-idf
+          ref: release/v6.0
+          fetch-depth: 1
+          path: esp
+      - name: Checkout main repository
+        uses: actions/checkout@v4
+        with:
+          path: main
+          submodules: 'recursive'
+
+      - name: Install esp-idf
+        run: |
+          cd esp
+          git submodule update --init --recursive --depth=1
+          ./install.sh esp32s3
+      - name: Build
+        run: |
+          cd $GITHUB_WORKSPACE/main
+          . $GITHUB_WORKSPACE/esp/export.sh
+          idf.py set-target esp32s3
+          idf.py build
+      - name: Build
+        run: |
+          cd $GITHUB_WORKSPACE/main
+          . $GITHUB_WORKSPACE/esp/export.sh
+          idf.py set-target esp32s3
+          idf.py build
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: arrivals.bin
+          path: ${{ github.workspace }}/main/build/arrivals.bin
+
