@@ -12,8 +12,9 @@
 
 static const char* TAG = "api";
 
+#define TRAIN_COUNT 6
 #define API_ENDPOINT "http://lapi.transitchicago.com/api/1.0/ttpositions.aspx?rt=%s&outputType=JSON&key=%s"
-#define STATION_ENDPOINT "http://lapi.transitchicago.com/api/1.0/ttarrivals.aspx?mapid=%d&max=3&outputType=JSON&key=%s"
+#define STATION_ENDPOINT "http://lapi.transitchicago.com/api/1.0/ttarrivals.aspx?mapid=%d&max=%d&outputType=JSON&key=%s"
 #define DIST_THRESHOLD (0.002f)
 
 static const char* line_names[] = {
@@ -29,7 +30,7 @@ static const char* line_names[] = {
 
 static line_t s_lines[LINE_COUNT];
 
-static expected_train_t trains[3];
+static expected_train_t trains[TRAIN_COUNT];
 static char station_name_buffer[128];
 static char* s_api_key = NULL;
 
@@ -218,7 +219,7 @@ static expected_trains_t decode_arrivals(http_response_t r)
     }
 
     json_obj_get_array(&ctx, "eta", &num_trains);
-    ret.count = num_trains >= 3 ? 3 : num_trains;
+    ret.count = num_trains >= TRAIN_COUNT ? TRAIN_COUNT : num_trains;
     for (int i = 0; i < ret.count; ++i) {
         char buffer[128];
         json_arr_get_object(&ctx, i);
@@ -279,7 +280,7 @@ expected_trains_t api_get_expected(station_id_t station)
     if (!s_api_key) {
         s_api_key = config_get_string("api_key");
     }
-    sprintf(url, STATION_ENDPOINT, station, s_api_key);
+    sprintf(url, STATION_ENDPOINT, station, TRAIN_COUNT, s_api_key);
     http_response_t resp = http_get(url);
     return decode_arrivals(resp);
 }

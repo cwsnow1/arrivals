@@ -388,7 +388,7 @@ static void arrivals_lcd(void* user_data)
     for (;; vTaskDelay(delay_ticks)) {
         expected_trains_t trains = api_get_expected(station);
         if (trains.count == 0) continue;
-        for (size_t i = 0; i < UI_NUM_ROWS; ++i) {
+        for (size_t i = 0; i < UI_NUM_TRAINS; ++i) {
             if (i < trains.count) {
                 lv_color_t lv_color;
                 color_t color = cta_get_lcd_color(trains.trains[i].line);

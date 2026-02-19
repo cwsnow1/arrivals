@@ -1,3 +1,5 @@
+#include <string.h>
+
 #include "lvgl.h"
 
 #include "ui.h"
@@ -9,8 +11,8 @@ LV_FONT_DECLARE(arimo_18);
 LV_FONT_DECLARE(arimo_24);
 LV_FONT_DECLARE(arimo_32);
 
-static lv_obj_t* rows[UI_NUM_ROWS];
-static lv_style_t row_styles[UI_NUM_ROWS];
+static lv_obj_t* rows[UI_NUM_TRAINS];
+static lv_style_t row_styles[UI_NUM_TRAINS];
 static lv_obj_t* station_label;
 
 void ui_init(lock_fn_t lock_fn)
@@ -89,6 +91,24 @@ void ui_connecting(bool connected)
     s_lock(false);
 }
 
+static void scroll_cb(lv_timer_t* timer)
+{
+    static uint32_t tile_index = 0;
+    lv_obj_t* tv = lv_timer_get_user_data(timer);
+    uint32_t next_tile_index = (tile_index + 1) % UI_NUM_TILES;
+    bool empty = true;
+    for (size_t i = 0; i < UI_NUM_ROWS; ++i) {
+        lv_obj_t* lbl = lv_obj_get_child_by_type(rows[next_tile_index * UI_NUM_ROWS + i], 0, &lv_label_class);
+        if (strcmp(lv_label_get_text(lbl), "")) {
+            empty = false;
+            break;
+        }
+    }
+    if (empty) return;
+    tile_index = next_tile_index;
+    lv_tileview_set_tile_by_index(tv, 0, tile_index, LV_ANIM_ON);
+}
+
 void ui_arrivals(void)
 {
     s_lock(true);
@@ -109,15 +129,25 @@ void ui_arrivals(void)
 
     lv_obj_set_style_pad_all(lv_screen_active(), 0, 0);
 
-
-    for (size_t i = 0; i < UI_NUM_ROWS; ++i) {
-        lv_obj_t* row_lbl = lv_label_create(lv_screen_active());
+    lv_obj_set_scrollbar_mode(lv_screen_active(), LV_SCROLLBAR_MODE_OFF);
+    lv_obj_t* tv = lv_tileview_create(lv_screen_active());
+    lv_obj_set_scrollbar_mode(tv, LV_SCROLLBAR_MODE_OFF);
+    lv_obj_set_style_bg_color(tv, (lv_color_t) { 33, 33, 33 }, 0);
+    lv_obj_set_size(tv, UI_W, 7 * UI_H / 8);
+    lv_obj_t* tiles[UI_NUM_TILES];
+    for (size_t i = 0; i < UI_NUM_TILES; ++i) {
+        tiles[i] = lv_tileview_add_tile(tv, 0, i, LV_DIR_TOP | LV_DIR_BOTTOM);
+        lv_obj_set_scrollbar_mode(tiles[i], LV_SCROLLBAR_MODE_OFF);
+    }
+    lv_obj_align(tv, LV_ALIGN_TOP_MID, 0, UI_H / 8);
+    for (size_t i = 0; i < UI_NUM_TRAINS; ++i) {
+        lv_obj_t* row_lbl = lv_label_create(tiles[i / UI_NUM_ROWS]);
         lv_label_set_text_fmt(row_lbl, "%zu", i + 1);
         lv_obj_set_style_text_font(row_lbl, &arimo_18, 0);
         lv_obj_set_style_text_color(row_lbl, (lv_color_t) { 255, 255, 255 }, 0);
-        lv_obj_align(row_lbl, LV_ALIGN_TOP_LEFT, 3, 5 + (UI_H / 8) + (7 * UI_H * i / 24));
+        lv_obj_align(row_lbl, LV_ALIGN_TOP_LEFT, 3, 5 + (7 * UI_H * (i % UI_NUM_ROWS) / 24));
 
-        rows[i] = lv_obj_create(lv_screen_active());
+        rows[i] = lv_obj_create(tiles[i / UI_NUM_ROWS]);
         lv_obj_set_style_border_width(rows[i], 1, 0);
         lv_obj_set_style_border_color(rows[i], (lv_color_t) { 0, 0, 0 }, 0);
         lv_obj_set_size(rows[i], 19 * UI_W / 20, 7 * UI_H / 24);
@@ -125,7 +155,7 @@ void ui_arrivals(void)
         lv_style_set_bg_color(&row_styles[i], (lv_color_t) { 100, 100, 100 });
         lv_style_set_text_color(&row_styles[i], (lv_color_t) { 255, 255, 255 });
         lv_obj_add_style(rows[i], &row_styles[i], 0);
-        lv_obj_align(rows[i], LV_ALIGN_TOP_RIGHT, 0, (UI_H / 8) + (7 * UI_H * i / 24));
+        lv_obj_align(rows[i], LV_ALIGN_TOP_RIGHT, 0, 7 * UI_H * (i % UI_NUM_ROWS) / 24);
         lv_obj_set_style_radius(rows[i], 0, 0);
         lv_obj_set_style_pad_all(rows[i], 0, 0);
 
@@ -152,6 +182,8 @@ void ui_arrivals(void)
         lv_obj_align(lbl, LV_ALIGN_BOTTOM_RIGHT, -5, -5);
         lv_label_set_long_mode(lbl, LV_LABEL_LONG_MODE_SCROLL_CIRCULAR);
     }
+
+    lv_timer_create(scroll_cb, UI_SCROLL_PERIOD, tv);
 
     s_lock(false);
 }

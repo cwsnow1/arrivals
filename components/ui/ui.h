@@ -7,9 +7,12 @@
 extern "C" {
 #endif
 
-#define UI_W        (320)
-#define UI_H        (240)
-#define UI_NUM_ROWS (3)
+#define UI_W             (320)
+#define UI_H             (240)
+#define UI_NUM_ROWS      (3)
+#define UI_NUM_TRAINS    (6)
+#define UI_NUM_TILES     ((UI_NUM_TRAINS + UI_NUM_ROWS - 1) / UI_NUM_ROWS)
+#define UI_SCROLL_PERIOD (10000)
 
 typedef void(*lock_fn_t)(bool);
 
