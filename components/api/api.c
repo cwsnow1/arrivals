@@ -46,6 +46,7 @@ static int timestamp_subtract(const char* arrival_ts)
         .tm_mday = day,
         .tm_mon = month - 1,
         .tm_year = year - 1900,
+        .tm_isdst = -1,
     };
     return mktime(&t) - time(NULL);
 }
